@@ -531,15 +531,15 @@ async function loadData() {
   if (si) { si.textContent = '🔄 Firebase 연결 중...'; si.style.color='var(--mt)'; }
   try {
     const ok = window._fbLoad && await window._fbLoad();
-    if (ok) {
+    if (ok && window._S && window._S.members && window._S.members.length > 0) {
       S = window._S;
       if (si) { si.textContent='✅ Firebase 동기화됨'; si.style.color='#059669'; }
       return;
     }
-  } catch(e) { console.warn('Firebase 로드 실패, 내장 데이터 사용:', e); }
-  // Firebase 실패 시 내장 데이터로 초기화 후 Firebase에 업로드
+  } catch(e) { console.warn('Firebase 로드 실패:', e); }
+  // Firebase에 데이터 없으면 EMBEDDED 데이터로 초기화 후 자동 업로드
+  if (si) { si.textContent='📦 초기 데이터 업로드 중...'; si.style.color='var(--gold)'; }
   applyData(JSON.parse(JSON.stringify(EMBEDDED)));
-  if (si) { si.textContent='📦 초기 데이터 로드됨 (Firebase 저장 중...)'; si.style.color='var(--gold)'; }
   await save();
   if (si) { si.textContent='✅ Firebase 저장 완료'; si.style.color='#059669'; }
 }
