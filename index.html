@@ -496,35 +496,19 @@ function onMemberSearch(){
   const panel=document.getElementById('mSrchResult');
   if(!panel)return;
   if(!q){panel.style.display='none';panel.innerHTML='';return;}
-  // 이름 정확 일치 우선, 부분 일치도 허용
   const ql=q.toLowerCase();
-  const hit=activeM().find(m=>(m.name||'').toLowerCase()===ql)
-    || activeM().find(m=>(m.name||'').toLowerCase().includes(ql));
+  const hit=activeM().find(m=>(m.name||'').toLowerCase()===ql)||activeM().find(m=>(m.name||'').toLowerCase().includes(ql));
   if(!hit){panel.style.display='none';return;}
   const myB=S.bungs.filter(b=>b.attendees.includes(hit.id)).sort((a,b)=>b.date.localeCompare(a.date));
   const wCnt=(S.warnings||[]).filter(w=>w.memberId===hit.id&&w.type==='경고').length;
   const nCnt=S.bungs.reduce((s,b)=>s+(b.cancelled.includes(hit.id)?1:0),0);
   panel.style.display='block';
-  panel.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
-      <span style="font-weight:700;font-size:12px;">📋 ${esc(hit.name)} 번개 참석 이력</span>
-      <button class="btn bsub" style="padding:2px 8px;font-size:10px;" onclick="document.getElementById('mSrchResult').style.display='none'">✕</button>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;">
-      <span class="pill pg">누적 ${myB.length}회 참석</span>
-      ${wCnt?`<span class="pill" style="background:#fee2e2;color:#dc2626;">⚠️ 경고 ${wCnt}건</span>`:''}
-      ${nCnt?`<span class="pill pr">🚷 노쇼 ${nCnt}건</span>`:''}
-    </div>
-    <div style="max-height:160px;overflow-y:auto;">
-      ${myB.length?myB.map(b=>`
-        <div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--bd);">
-          <span class="db" style="font-size:10px;flex-shrink:0;">${dBadge(b.date)}</span>
-          <span style="flex:1;">${esc(b.title)}</span>
-          <span style="font-size:10px;color:var(--mt);">${esc(b.date)}</span>
-          ${b.cancelled.includes(hit.id)?'<span class="pill pr">취소</span>':''}
-        </div>`).join('')
-      :'<p style="color:var(--mt);text-align:center;padding:8px;">참석 이력 없음</p>'}
-    </div>`;
+  panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><span style="font-weight:700;font-size:12px;">📋 '+esc(hit.name)+' 번개 참석 이력</span><button class="btn bsub" style="padding:2px 8px;font-size:10px;" onclick="document.getElementById(\'mSrchResult\').style.display=\'none\'">✕</button></div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;"><span class="pill pg">누적 '+myB.length+'회 참석</span>'+(wCnt?'<span class="pill" style="background:#fee2e2;color:#dc2626;">⚠️ 경고 '+wCnt+'건</span>':'')+(nCnt?'<span class="pill pr">🚷 노쇼 '+nCnt+'건</span>':'')+'</div>'
+    +'<div style="max-height:160px;overflow-y:auto;">'
+    +(myB.length?myB.map(b=>'<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--bd);"><span class="db" style="font-size:10px;flex-shrink:0;">'+dBadge(b.date)+'</span><span style="flex:1;">'+esc(b.title)+'</span><span style="font-size:10px;color:var(--mt);">'+esc(b.date)+'</span>'+(b.cancelled.includes(hit.id)?'<span class="pill pr">취소</span>':'')+'</div>').join('')
+    :'<p style="color:var(--mt);text-align:center;padding:8px;">참석 이력 없음</p>')
+    +'</div>';
 }(type){if(type==='new')_mF=_mF==='new'?'':'new';else if(type==='zero')_mF=_mF==='zero'?'':'zero';else if(type==='upcoming'){_upF=!_upF;}document.getElementById('fNew').className='ftg '+(_mF==='new'?'fton':'ftoff');document.getElementById('fZero').className='ftg '+(_mF==='zero'?'fton':'ftoff');const fu=document.getElementById('fUp');if(fu)fu.className='ftg '+(_upF?'fton':'ftoff');if(type==='upcoming')safe(renderBungs);else safe(renderMembers);}
 function roleTag(r){if(r==='모임장')return'<span class="tag tld">모임장</span>';if(r==='운영진')return'<span class="tag tst2">운영진</span>';return'';}
 function warnTag(id){try{const cnt=(S.warnings||[]).filter(w=>w.memberId===id&&w.type==='경고').length;return cnt?`<span class="tag twarn">⚠️${cnt}</span>`:'';}catch(e){return'';}}
