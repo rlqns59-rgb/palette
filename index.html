@@ -432,15 +432,17 @@ async function loadData() {
   try {
     const ok = window._fbLoad && await window._fbLoad();
     if (ok && window._remote && window._remote.members && window._remote.members.length>0) {
+      // ★ Firebase에 데이터가 있으면 무조건 그걸 사용 (절대 EMBEDDED로 덮어쓰지 않음)
       applyData(window._remote);
       if (si) { si.textContent='✅ Firebase 동기화됨'; si.style.color='#059669'; }
       return;
     }
   } catch(e) { console.warn(e); }
+  // Firebase가 완전히 비어있을 때만 EMBEDDED로 초기화
+  if (si) { si.textContent='📦 Firebase 비어있음, 초기 데이터 업로드 중...'; si.style.color='var(--gold)'; }
   applyData(JSON.parse(JSON.stringify(EMBEDDED)));
-  if (si) { si.textContent='📦 초기 데이터 업로드 중...'; si.style.color='var(--gold)'; }
   await save();
-  if (si) { si.textContent='✅ 저장 완료'; si.style.color='#059669'; }
+  if (si) { si.textContent='✅ 초기 데이터 저장 완료'; si.style.color='#059669'; }
 }
 async function save() { window._S=S; if (window._fbSave) await window._fbSave(S); }
 
