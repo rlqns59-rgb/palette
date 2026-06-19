@@ -300,9 +300,22 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <!-- ★수정3: 경고/노쇼에 삭제 열 추가 -->
     <div class="card"><div class="sec" style="color:var(--gold);">⚠️ 경고/노쇼 <span id="wCt" style="font-size:10px;color:var(--mt);"></span></div><div style="overflow-y:auto;max-height:200px;"><table><thead><tr><th>이름</th><th>날짜</th><th>유형</th><th>사유</th><th id="wDelH">삭제</th></tr></thead><tbody id="wB"></tbody></table></div></div>
     <div class="card"><div class="sec" style="color:#dc2626;">🚫 거절 리스트 <span id="rjCt" style="font-size:10px;color:var(--mt);"></span></div><div style="overflow-y:auto;max-height:200px;"><table><thead><tr><th>이름</th><th>성별</th><th>날짜</th><th>사유</th><th id="rjDelH" style="display:none;">삭제</th></tr></thead><tbody id="rjB"></tbody></table></div></div>
-    <div class="card"><div class="sec" style="color:var(--gold);">⛔ 강퇴/탈퇴</div><div style="overflow-y:auto;max-height:200px;"><table><thead><tr><th>이름</th><th>구분</th><th>기간</th><th>사유</th></tr></thead><tbody id="kvB"></tbody></table></div></div>
+    <div class="card"><div class="sec" style="color:var(--gold);">⛔ 강퇴/탈퇴</div><div style="overflow-y:auto;max-height:200px;"><table><thead><tr><th>이름</th><th>구분</th><th>기간</th><th>사유</th><th id="kvFixH" style="display:none;">관리</th></tr></thead><tbody id="kvB"></tbody></table></div></div>
   </div>
 </div>
+</div>
+
+<!-- 강퇴/탈퇴 날짜 확인 모달 -->
+<div id="exitMod" class="mov" style="display:none;" onclick="if(event.target===this)closeM('exitMod')">
+  <div class="mbx" style="max-width:380px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;"><h3 id="exitModTitle" style="font-size:14px;font-weight:700;"></h3><button onclick="closeM('exitMod')" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button></div>
+    <p id="exitTarget" style="font-size:12px;color:var(--sb);margin-bottom:12px;background:var(--s2);padding:8px 12px;border-radius:8px;"></p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label class="lbl">처리 날짜</label><input id="exitDateInput" type="date">
+      <label class="lbl">사유 (선택)</label><input id="exitReasonInput" placeholder="예: 자진탈퇴, 무응답, 규칙위반 등">
+      <button id="exitConfirmBtn" class="btn bgr" style="width:100%;padding:9px;font-weight:700;" onclick="confirmExit()">✅ 확인</button>
+    </div>
+  </div>
 </div>
 
 <!-- 관리 드롭다운 -->
@@ -310,9 +323,22 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <div class="ddi" onclick="openEdit()">✏️ 정보 수정</div>
   <div class="ddi" style="color:#d97706;" onclick="openWarnModal()">⚠️ 경고 처리</div>
   <div class="ddi" style="color:#dc2626;" onclick="chgStat('rejected')">🚫 거절 처리</div>
-  <div class="ddi" style="color:var(--gold);" onclick="chgStat('kicked')">⛔ 강퇴 처리</div>
-  <div class="ddi" style="color:var(--sb);" onclick="chgStat('left')">🚪 탈퇴 처리</div>
+  <div class="ddi" style="color:var(--gold);" onclick="openExitModal('kicked')">⛔ 강퇴 처리</div>
+  <div class="ddi" style="color:var(--sb);" onclick="openExitModal('left')">🚪 탈퇴 처리</div>
   <div class="ddi" style="color:#dc2626;border-top:1px solid #fee2e2;" onclick="deleteMember()">🗑 회원 삭제</div>
+</div>
+
+<!-- 강퇴/탈퇴 날짜+사유 수정 모달 (기존 기록용) -->
+<div id="fixExitMod" class="mov" style="display:none;" onclick="if(event.target===this)closeM('fixExitMod')">
+  <div class="mbx" style="max-width:380px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;"><h3 style="font-size:14px;font-weight:700;">🛠 강퇴·탈퇴 기록 수정</h3><button onclick="closeM('fixExitMod')" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button></div>
+    <p id="fixExitTarget" style="font-size:12px;color:var(--sb);margin-bottom:12px;background:var(--s2);padding:8px 12px;border-radius:8px;"></p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label class="lbl">처리 날짜</label><input id="fixExitDateInput" type="date">
+      <label class="lbl">사유</label><input id="fixExitReasonInput" placeholder="예: 자진탈퇴, 무응답, 규칙위반 등">
+      <button class="btn bgr" style="width:100%;padding:9px;font-weight:700;" onclick="saveFixExit()">💾 저장</button>
+    </div>
+  </div>
 </div>
 
 <!-- 명예의 전당 팝업 -->
@@ -368,58 +394,75 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
 <!-- 정산 모달 -->
 <div id="stlMod" class="mov" style="display:none;" onclick="if(event.target===this)closeM('stlMod')">
-  <div class="mbx" style="max-width:820px;padding:18px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <h3 style="font-size:15px;font-weight:800;color:#5b21b6;">💰 정산 시트</h3>
+  <div style="background:#fff;border-radius:18px;padding:0;width:94%;max-width:920px;max-height:90vh;overflow:hidden;box-shadow:0 20px 60px rgba(124,58,237,.18);display:flex;flex-direction:column;">
+    <div style="padding:14px 18px;border-bottom:1px solid #ede9fe;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="font-size:15px;font-weight:800;color:#5b21b6;">💰 정산 시트</h3>
+        <span id="stl_bungTitle" style="font-size:12px;color:#7c3aed;font-weight:600;background:#f5f3ff;padding:2px 8px;border-radius:99px;"></span>
+        <span id="stl_savedBadge" style="font-size:10px;color:#059669;background:#d1fae5;padding:2px 8px;border-radius:99px;display:none;">✅ 저장됨</span>
+      </div>
       <button onclick="closeM('stlMod')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;">✕</button>
     </div>
-    <div class="stl-card">
-      <div class="stl-row">
-        <div style="flex:2;min-width:120px"><span class="stl-lbl">번개명</span><input class="stl-input" id="stl_bName" readonly/></div>
-        <div style="flex:1;min-width:90px"><span class="stl-lbl">날짜</span><input class="stl-input" id="stl_bDate" type="date" readonly/></div>
-        <div style="flex:1;min-width:100px"><span class="stl-lbl">벙주</span><select class="stl-input" id="stl_host" onchange="stlRenderAll()"></select></div>
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <div style="width:200px;flex-shrink:0;border-right:1px solid #ede9fe;padding:12px;overflow-y:auto;background:#faf5ff;">
+        <div style="font-size:11px;font-weight:700;color:#5b21b6;margin-bottom:8px;">📂 저장된 정산</div>
+        <button class="stl-btn stl-btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="stlNewSheet()">＋ 새 정산</button>
+        <div id="stl_histList"></div>
       </div>
-      <div class="stl-row" style="margin-bottom:0;">
-        <div style="flex:2;min-width:140px"><span class="stl-lbl">계좌 불러오기</span><select class="stl-input" id="stl_acctSel" onchange="stlLoadAcct()"></select></div>
-        <div style="flex:3;min-width:160px"><span class="stl-lbl">벙주 계좌번호</span><input class="stl-input" id="stl_acctInput" placeholder="은행 계좌번호 이름" oninput="stlUpdateAcctDisp()"/></div>
-        <button class="stl-btn" onclick="stlSaveAcct()" style="margin-bottom:1px;">💾 저장</button>
-      </div>
-      <div id="stl_acctDisp" class="stl-acct">계좌번호 : —</div>
-    </div>
-    <div class="stl-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div class="stl-sec" style="margin:0;">차수별 비용</div>
-        <button class="stl-btn" onclick="stlAddCost()">+ 차수 추가</button>
-      </div>
-      <div id="stl_costItems"></div>
-    </div>
-    <div class="stl-card">
-      <div class="stl-sec">요금 옵션</div>
-      <div class="stl-tgl-grp">
-        <div class="stl-tgl-row"><button class="stl-tgl on" id="stl_togMoim" onclick="stlTog('stl_togMoim')" aria-label="모임비"></button><span style="font-size:12px;">모임비 1,000원<span class="stl-tag">벙주제외</span></span></div>
-        <div class="stl-tgl-row"><button class="stl-tgl on" id="stl_togBj" onclick="stlTog('stl_togBj')" aria-label="벙주비"></button><span style="font-size:12px;">벙주비 1,000원<span class="stl-tag">벙주제외</span></span></div>
-        <div class="stl-tgl-row"><button class="stl-tgl" id="stl_togNoBj" onclick="stlTogNoBj()" aria-label="벙주비 미포함"></button><span style="font-size:12px;color:#94a3b8;">벙주비 미포함 선언</span></div>
-      </div>
-    </div>
-    <div class="stl-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div class="stl-sec" style="margin:0;">참여자</div>
-        <button class="stl-btn" onclick="stlAddMember()">+ 참여자 추가</button>
-      </div>
-      <div style="overflow-x:auto;"><table class="stl-table" id="stl_mainTable"><thead id="stl_mainHead"></thead><tbody id="stl_mainBody"></tbody><tfoot id="stl_mainFoot"></tfoot></table></div>
-    </div>
-    <div class="stl-card" id="stl_optSection">
-      <div class="stl-opt-lbl">🙈 캡처 시 숨김 — 차수별 상세 옵션 (논알콜 / 늦참 차감 / 면제)</div>
-      <div style="overflow-x:auto;"><table class="stl-table" id="stl_optTable"><thead id="stl_optHead"></thead><tbody id="stl_optBody"></tbody></table></div>
-    </div>
-    <div class="stl-card">
-      <div class="stl-sec">정산 결과</div>
-      <div id="stl_resultRows"></div>
-      <div class="stl-divider"></div>
-      <div class="stl-acct" id="stl_acctDisp2">계좌번호 : —</div>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="stl-btn stl-btn-primary" onclick="stlCopyResult()">📋 결과 복사</button>
-        <button class="stl-btn" onclick="stlCopyKakao()">💬 카카오 공지 복사</button>
+      <div style="flex:1;overflow-y:auto;padding:14px;">
+        <div class="stl-card">
+          <div class="stl-row">
+            <div style="flex:2;min-width:120px"><span class="stl-lbl">번개명</span><input class="stl-input" id="stl_bName" readonly/></div>
+            <div style="flex:1;min-width:90px"><span class="stl-lbl">날짜</span><input class="stl-input" id="stl_bDate" type="date" readonly/></div>
+            <div style="flex:1;min-width:100px"><span class="stl-lbl">벙주</span><select class="stl-input" id="stl_host" onchange="stlRenderAll()"></select></div>
+          </div>
+          <div class="stl-row" style="margin-bottom:0;">
+            <div style="flex:2;min-width:140px"><span class="stl-lbl">계좌 불러오기</span><select class="stl-input" id="stl_acctSel" onchange="stlLoadAcct()"></select></div>
+            <div style="flex:3;min-width:160px"><span class="stl-lbl">벙주 계좌번호</span><input class="stl-input" id="stl_acctInput" placeholder="은행 계좌번호 이름" oninput="stlUpdateAcctDisp()"/></div>
+            <button class="stl-btn" onclick="stlSaveAcct()" style="margin-bottom:1px;">💾 저장</button>
+          </div>
+          <div id="stl_acctDisp" class="stl-acct">계좌번호 : —</div>
+        </div>
+        <div class="stl-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div class="stl-sec" style="margin:0;">차수별 비용</div>
+            <button class="stl-btn" onclick="stlAddCost()">+ 차수 추가</button>
+          </div>
+          <div id="stl_costItems"></div>
+        </div>
+        <div class="stl-card">
+          <div class="stl-sec">요금 옵션</div>
+          <div class="stl-tgl-grp">
+            <div class="stl-tgl-row"><button class="stl-tgl on" id="stl_togMoim" onclick="stlTog('stl_togMoim')" aria-label="모임비"></button><span style="font-size:12px;">모임비 1,000원<span class="stl-tag">벙주제외</span></span></div>
+            <div class="stl-tgl-row"><button class="stl-tgl on" id="stl_togBj" onclick="stlTog('stl_togBj')" aria-label="벙주비"></button><span style="font-size:12px;">벙주비 1,000원<span class="stl-tag">벙주제외</span></span></div>
+            <div class="stl-tgl-row"><button class="stl-tgl" id="stl_togNoBj" onclick="stlTogNoBj()" aria-label="벙주비 미포함"></button><span style="font-size:12px;color:#94a3b8;">벙주비 미포함 선언</span></div>
+          </div>
+        </div>
+        <div class="stl-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div class="stl-sec" style="margin:0;">참여자</div>
+            <button class="stl-btn" onclick="stlAddMember()">+ 참여자 추가</button>
+          </div>
+          <div class="stl-opt-lbl" style="margin-bottom:6px;">💡 정산비용 칸을 직접 클릭해 수정하면, 차액이 나머지 인원에게 자동 재분배돼요.</div>
+          <div style="overflow-x:auto;"><table class="stl-table" id="stl_mainTable"><thead id="stl_mainHead"></thead><tbody id="stl_mainBody"></tbody><tfoot id="stl_mainFoot"></tfoot></table></div>
+        </div>
+        <div class="stl-card" id="stl_optSection">
+          <div class="stl-opt-lbl">🙈 캡처 시 숨김 — 차수별 상세 옵션 (논알콜 / 늦참 차감 / 면제)</div>
+          <div style="overflow-x:auto;"><table class="stl-table" id="stl_optTable"><thead id="stl_optHead"></thead><tbody id="stl_optBody"></tbody></table></div>
+        </div>
+        <div class="stl-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <div class="stl-sec" style="margin:0;">정산 결과</div>
+            <button class="stl-btn stl-btn-save" onclick="stlSaveSheet()">💾 정산 저장</button>
+          </div>
+          <div id="stl_resultRows"></div>
+          <div class="stl-divider"></div>
+          <div class="stl-acct" id="stl_acctDisp2">계좌번호 : —</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="stl-btn stl-btn-primary" onclick="stlCopyResult()">📋 결과 복사</button>
+            <button class="stl-btn" onclick="stlCopyKakao()">💬 카카오 공지 복사</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -446,6 +489,7 @@ function unlock(isAdmin){
   document.getElementById('mMgmtH').style.display=isAdmin?'':'none';
   document.getElementById('btnImport').style.display=isAdmin?'':'none';
   document.getElementById('rjDelH').style.display=isAdmin?'':'none';
+  const kvf=document.getElementById('kvFixH');if(kvf)kvf.style.display=isAdmin?'':'none';
   if(!isAdmin){const o=document.getElementById('opTop');if(o)o.innerHTML=o.textContent+' <span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:99px;font-size:10px;margin-left:4px;">👁 조회 전용</span>';}
 }
 
@@ -469,10 +513,10 @@ const GF={
 const EMBEDDED={"members":[{"id":"mprr85k9g1gna","name":"김성민","gender":"여","birthYear":1989,"height":"175","mbti":"ESFP","role":"모임장","grade":"일반","region":"","birth":"1989-04-28","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k97yxve","name":"김동욱","gender":"남","birthYear":1991,"height":"180","mbti":"ESTJ","role":"운영진","grade":"일반","region":"","birth":"1991-10-07","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9zvyq5","name":"이현준","gender":"남","birthYear":1991,"height":"179","mbti":"ISTP","role":"운영진","grade":"일반","region":"","birth":"1991-11-16","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9ouuiu","name":"이세지","gender":"여","birthYear":1993,"height":"168","mbti":"ISTJ","role":"운영진","grade":"일반","region":"","birth":"1993-05-10","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k97bcw9","name":"정준기","gender":"남","birthYear":1992,"height":"177","mbti":"INFP","role":"일반","grade":"일반","region":"강남","birth":"1992-01-30","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9eq9jm","name":"박초희","gender":"여","birthYear":1991,"height":"166","mbti":"ENTJ","role":"일반","grade":"일반","region":"문정","birth":"1991-01-11","joindate":"2026-05-04","note":"","status":"active"},{"id":"mprr85k9agquc","name":"박초은","gender":"여","birthYear":1993,"height":"168","mbti":"INFP","role":"일반","grade":"일반","region":"문정","birth":"1993-02-13","joindate":"2026-05-04","note":"건강이슈 유예","status":"active"},{"id":"mprr85k9ohy9p","name":"김상규","gender":"남","birthYear":1987,"height":"180","mbti":"ESFJ","role":"일반","grade":"일반","region":"선정릉","birth":"1987-03-02","joindate":"2026-05-05","note":"","status":"active"},{"id":"mprr85k9mcnt6","name":"김진연","gender":"여","birthYear":1990,"height":"164","mbti":"ISTJ","role":"일반","grade":"일반","region":"천호/문정","birth":"1990-12-08","joindate":"2026-05-06","note":"5월 29일 벙 당일취소","status":"active"},{"id":"mprr85k9k3qap","name":"이승민","gender":"남","birthYear":1992,"height":"187","mbti":"ISFJ","role":"일반","grade":"일반","region":"천호/부천","birth":"1992-05-02","joindate":"2026-05-06","note":"","status":"active"},{"id":"mprr85k94035j","name":"정세연","gender":"여","birthYear":1987,"height":"166","mbti":"ESTP","role":"일반","grade":"일반","region":"송파","birth":"1987-03-20","joindate":"2026-05-06","note":"","status":"active"},{"id":"mprr85k9pmdc9","name":"김원재","gender":"남","birthYear":1987,"height":"179","mbti":"ISTP","role":"일반","grade":"일반","region":"송파","birth":"1987-07-30","joindate":"2026-05-08","note":"","status":"active"},{"id":"mprr85k95r9ih","name":"전해성","gender":"남","birthYear":1991,"height":"178","mbti":"ENFJ","role":"일반","grade":"일반","region":"광진","birth":"1991-03-12","joindate":"2026-05-09","note":"","status":"active"},{"id":"mprr85k9c9t2l","name":"김동민","gender":"남","birthYear":1992,"height":"180","mbti":"ENFP","role":"일반","grade":"일반","region":"잠새","birth":"1992-12-13","joindate":"2026-05-12","note":"","status":"active"},{"id":"mprr85k94gglj","name":"이승현","gender":"남","birthYear":1994,"height":"175","mbti":"ESTJ","role":"일반","grade":"일반","region":"암사/문정","birth":"1994-03-02","joindate":"2026-05-12","note":"[경고] 5/24 선넘는 말","status":"active"},{"id":"mprr85k97pba0","name":"박고은","gender":"여","birthYear":1996,"height":"160","mbti":"ENFP","role":"일반","grade":"일반","region":"망원/잠실","birth":"1996-01-23","joindate":"2026-05-12","note":"","status":"active"},{"id":"mprr85k9bdc5t","name":"강명구","gender":"남","birthYear":1988,"height":"177","mbti":"ESTP","role":"일반","grade":"일반","region":"잠실/하남","birth":"1988-09-23","joindate":"2026-05-14","note":"","status":"active"},{"id":"mprr85k9d2ojn","name":"이윤주","gender":"여","birthYear":1993,"height":"172","mbti":"ISFP","role":"일반","grade":"일반","region":"잠실/선정릉","birth":"1993-10-25","joindate":"2026-05-17","note":"","status":"active"},{"id":"mprr85k9uek9p","name":"김민호","gender":"남","birthYear":1990,"height":"182","mbti":"ISTJ","role":"일반","grade":"일반","region":"분당/잠실","birth":"1990-09-13","joindate":"2026-05-19","note":"","status":"active"},{"id":"mprr85k9vyvb6","name":"박소진","gender":"여","birthYear":1994,"height":"155","mbti":"INFP","role":"일반","grade":"일반","region":"구리/판교","birth":"1994-02-06","joindate":"2026-05-21","note":"","status":"active"},{"id":"mprr85k9fxery","name":"김규린","gender":"여","birthYear":1989,"height":"165","mbti":"ENFJ","role":"일반","grade":"일반","region":"방이/반포","birth":"1989-05-04","joindate":"2026-05-22","note":"","status":"active"},{"id":"mprr85k9qbzma","name":"강인호","gender":"남","birthYear":1993,"height":"178","mbti":"ISTP","role":"일반","grade":"일반","region":"성남/가락","birth":"1993-01-29","joindate":"2026-05-22","note":"","status":"active"},{"id":"mprr85k9jw1fp","name":"유서연","gender":"여","birthYear":1988,"height":"170","mbti":"INFP","role":"일반","grade":"일반","region":"송파","birth":"1988-07-01","joindate":"2026-05-25","note":"","status":"active"},{"id":"mprr85k9820a8","name":"오진성","gender":"남","birthYear":1995,"height":"173","mbti":"ISFP","role":"일반","grade":"일반","region":"망우/다산","birth":"1995-09-16","joindate":"2026-05-29","note":"","status":"active"},{"id":"mpuhv7qprun80","name":"조아미","gender":"여","birthYear":1993,"height":"162","mbti":"ESTJ","role":"일반","grade":"일반","region":"하남미사","birth":"1993-10-19","joindate":"2026-05-31","note":"","status":"active"},{"id":"mpuhwiz4kowgs","name":"강기성","gender":"남","birthYear":1988,"height":"172","mbti":"ESTJ","role":"일반","grade":"일반","region":"마천/성북구","birth":"1988-04-09","joindate":"2026-05-31","note":"","status":"active"},{"id":"mpuk0tuaf15ka","name":"이경진","gender":"여","birthYear":1993,"height":"166","mbti":"INTP","role":"일반","grade":"일반","region":"하남/건대","birth":"1993-01-17","joindate":"2026-05-30","note":"","status":"active"}],"archived":[{"id":"mprr85k95u3zt","name":"박웅희","gender":"남","birthYear":1994,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-04","note":"[강퇴] 2026/5/17","status":"kicked","exitDate":"2026/5/17","period":"5/4~5/17(13일)","reason":"강퇴"},{"id":"mprr85kaxw8hu","name":"허진","gender":"남","birthYear":1989,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-20","note":"[탈퇴] 2026/5/22","status":"left","exitDate":"2026/5/22","period":"5/20~5/22(2일)","reason":"탈퇴"},{"id":"mprr85kasddgk","name":"김병규","gender":"남","birthYear":1990,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-17","note":"[강퇴-무응답] 2026/5/23","status":"kicked","exitDate":"2026/5/23","period":"5/17~5/23(6일)","reason":"강퇴-무응답"},{"id":"mprr85karfcat","name":"이현빈","gender":"여","birthYear":1994,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-23","note":"[탈퇴] 2026/5/25","status":"left","exitDate":"2026/5/25","period":"5/23~5/25(2일)","reason":"탈퇴"},{"id":"mprr85kanhunf","name":"윤수진","gender":"여","birthYear":1993,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-12","note":"[강퇴-미참석] 2026/5/26","status":"kicked","exitDate":"2026/5/26","period":"5/12~5/26(14일)","reason":"강퇴-미참석"},{"id":"mprr85kahq3ub","name":"김현중","gender":"남","birthYear":1991,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-19","note":"[자진탈퇴] 2026/5/27","status":"left","exitDate":"2026/5/27","period":"5/19~5/27(8일)","reason":"자진탈퇴"},{"id":"mprr85kav2um8","name":"배하림","gender":"여","birthYear":1994,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-03","note":"[자진탈퇴(욕설)] 2026/5/28","status":"left","exitDate":"2026/5/28","period":"5/3~5/28(25일)","reason":"자진탈퇴(욕설)"},{"id":"mprrb3zonjara","name":"예시남","gender":"남","birthYear":1993,"height":"181","mbti":"INTJ","role":"일반","grade":"일반","region":"송파","birth":"2026-06-05","joindate":"2026-05-29","note":"[강퇴] 2026/5/30","status":"kicked","exitDate":"2026/5/30","period":"5/29~5/30(1일)","reason":"강퇴"}],"rejects":[{"id":"mprr85kazb8c4","no":1,"name":"김요섭","gender":"남","rejectDate":"2026-05-06","reason":"투표 반대"},{"id":"mprr85kag0pxq","no":2,"name":"이성희","gender":"남","rejectDate":"2026-05-06","reason":"과거 제보"}],"bungs":[{"id":"mpui0tkymisdk","title":"올공벙","date":"2026-06-13","attendees":["mprr85k9g1gna","mprr85k9ouuiu","mprr85k95r9ih"],"cancelled":[]},{"id":"mpuhz8o5ficvl","title":"문정벙","date":"2026-06-06","attendees":["mprr85k97yxve","mprr85k9zvyq5","mprr85k97bcw9","mprr85k9k3qap","mprr85k94gglj","mprr85k97pba0","mprr85k9d2ojn","mprr85k9uek9p","mprr85k9jw1fp","mpuhv7qprun80"],"cancelled":[]},{"id":"mprr85ka5oed1","title":"첫벙","date":"2026-05-09","attendees":["mprr85k9g1gna","mprr85k97yxve","mprr85k9zvyq5","mprr85k9ouuiu","mprr85k97bcw9"],"cancelled":[]}],"warnings":[]};
 
 /* ══ STATE ══ */
-let S={members:[],archived:[],rejects:[],bungs:[],warnings:[]};
+let S={members:[],archived:[],rejects:[],bungs:[],warnings:[],settlements:{}};
 function migM(m){if(!m)return null;m.id=m.id||uid();m.name=m.name||'(이름없음)';m.status=m.status||'active';m.note=m.note||'';m.gender=m.gender||'';m.mbti=m.mbti||'';m.role=m.role||'일반';m.grade=m.grade||'일반';m.region=m.region||'';m.height=m.height||'';m.birth=m.birth||'';m.joindate=m.joindate||'';if(!m.birthYear||m.birthYear<1900)m.birthYear=(m.age&&+m.age>0)?2026-+m.age+1:null;m.age=m.birthYear?2026-+m.birthYear+1:(+m.age||null);return m;}
 function migB(b){if(!b)return null;b.id=b.id||uid();b.title=b.title||'(제목없음)';b.date=b.date||'';b.attendees=Array.isArray(b.attendees)?b.attendees:[];b.cancelled=Array.isArray(b.cancelled)?b.cancelled:[];return b;}
-function applyData(raw){S.members=(raw.members||[]).map(migM).filter(Boolean);S.archived=(raw.archived||[]).map(migM).filter(Boolean);S.rejects=raw.rejects||[];S.bungs=(raw.bungs||[]).map(migB).filter(Boolean);S.warnings=(raw.warnings||[]).filter(w=>w.type!=='노쇼');window._S=S;}
+function applyData(raw){S.members=(raw.members||[]).map(migM).filter(Boolean);S.archived=(raw.archived||[]).map(migM).filter(Boolean);S.rejects=raw.rejects||[];S.bungs=(raw.bungs||[]).map(migB).filter(Boolean);S.warnings=(raw.warnings||[]).filter(w=>w.type!=='노쇼');S.settlements=raw.settlements||{};window._S=S;}
 window._sync=d=>{applyData(d);renderAll();};
 
 async function loadData(){
@@ -568,7 +612,110 @@ function openEdit(){const m=S.members.find(x=>x.id===_selId);if(!m)return;_editI
 /* ★수정1: saveEdit - 이름 저장 포함 */
 async function saveEdit(){const m=S.members.find(x=>x.id===_editId);if(!m)return;const newName=(document.getElementById('ename').value||'').trim();if(newName)m.name=newName;const by=parseInt(document.getElementById('eby').value||'0',10);if(by>1900){m.birthYear=by;m.age=kr(by);}const kv={em:'mbti',ero:'role',egr:'grade',erg:'region',eht:'height',ent:'note'};Object.entries(kv).forEach(([elId,field])=>{const el=document.getElementById(elId);if(el&&el.value!=='')m[field]=el.value.trim();});await save();renderMembers();closeM('editMod');}
 
-async function chgStat(status){const idx=S.members.findIndex(m=>m.id===_selId);if(idx<0)return;const m=S.members.splice(idx,1)[0];m.status=status;const now=new Date();const d=now.toLocaleDateString('ko');const exitStr=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate();if(status==='kicked'){m.note=(m.note?m.note+'\n':'')+'[강퇴] '+d;m.exitDate=exitStr;m.reason=m.reason||'강퇴';}if(status==='left'){m.note=(m.note?m.note+'\n':'')+'[탈퇴] '+d;m.exitDate=exitStr;m.reason=m.reason||'탈퇴';}if(m.joindate){const jd=new Date(m.joindate);const diffDays=Math.floor((now-jd)/86400000)+1;const jm=jd.getMonth()+1,jdd=jd.getDate();const nm=now.getMonth()+1,ndd=now.getDate();m.period=jm+'/'+jdd+'~'+nm+'/'+ndd+'('+diffDays+'일)';}if(status==='rejected'){S.rejects.push({id:uid(),no:S.rejects.length+1,name:m.name,gender:m.gender,rejectDate:d,reason:'운영진 처리'});await save();renderMembers();if(_tab===3)safe(syncDashAll);return;}S.archived.push(m);await save();renderMembers();if(_tab===3)safe(syncDashAll);}
+async function chgStat(status){
+  // rejected는 기존 그대로 즉시 처리(날짜 확인 불필요)
+  const idx=S.members.findIndex(m=>m.id===_selId);if(idx<0)return;
+  const m=S.members.splice(idx,1)[0];m.status=status;
+  const d=new Date().toLocaleDateString('ko');
+  S.rejects.push({id:uid(),no:S.rejects.length+1,name:m.name,gender:m.gender,rejectDate:d,reason:'운영진 처리'});
+  await save();renderMembers();if(_tab===3)safe(syncDashAll);
+}
+
+// YYYY-MM-DD 문자열을 로컬 타임존 기준 Date로 안전 파싱 (UTC 밀림 방지)
+function parseLocalDate(str){
+  if(!str)return new Date();
+  const parts=str.split('-').map(Number);
+  return new Date(parts[0],parts[1]-1,parts[2]||1);
+}
+function fmtDateParts(dt){return{y:dt.getFullYear(),m:dt.getMonth()+1,d:dt.getDate()};}
+
+// 강퇴/탈퇴 날짜 확인 모달
+let _exitStatus=null;
+function openExitModal(status){
+  const m=S.members.find(x=>x.id===_selId);if(!m)return;
+  _exitStatus=status;
+  document.getElementById('exitModTitle').textContent=status==='kicked'?'⛔ 강퇴 처리':'🚪 탈퇴 처리';
+  document.getElementById('exitTarget').textContent='대상: '+m.name+' ('+(m.age||'-')+'세 / '+(m.gender||'-')+')';
+  document.getElementById('exitDateInput').value=getRef();
+  document.getElementById('exitReasonInput').value='';
+  document.getElementById('exitConfirmBtn').className='btn '+(status==='kicked'?'bgold':'bgr');
+  document.getElementById('exitConfirmBtn').textContent=status==='kicked'?'⛔ 강퇴 확정':'🚪 탈퇴 확정';
+  document.getElementById('exitMod').style.display='flex';
+}
+async function confirmExit(){
+  const idx=S.members.findIndex(m=>m.id===_selId);
+  if(idx<0){alert('회원 정보를 찾을 수 없습니다. 다시 시도해주세요.');closeM('exitMod');return;}
+  const status=_exitStatus;
+  const dateStr=document.getElementById('exitDateInput').value||getRef();
+  const reasonInput=(document.getElementById('exitReasonInput').value||'').trim();
+  const m=S.members.splice(idx,1)[0];m.status=status;
+  const dt=parseLocalDate(dateStr);
+  const ep=fmtDateParts(dt);
+  const exitStr=ep.y+'/'+ep.m+'/'+ep.d;
+  const dLabel=ep.y+'. '+ep.m+'. '+ep.d+'.';
+  const defaultReason=status==='kicked'?'강퇴':'탈퇴';
+  const finalReason=reasonInput?defaultReason+'('+reasonInput+')':defaultReason;
+  m.note=(m.note?m.note+'\n':'')+'['+defaultReason+'] '+dLabel+(reasonInput?' - '+reasonInput:'');
+  m.exitDate=exitStr;
+  m.reason=finalReason;
+  if(m.joindate){
+    const jd=new Date(m.joindate+'T00:00:00');
+    const jp=fmtDateParts(jd);
+    const diffDays=Math.floor((dt-jd)/86400000)+1;
+    m.period=jp.m+'/'+jp.d+'~'+ep.m+'/'+ep.d+'('+diffDays+'일)';
+  }
+  S.archived.push(m);
+  await save();
+  renderMembers();
+  closeM('exitMod');
+  if(_tab===3)safe(syncDashAll);
+}
+
+// 강퇴/탈퇴 기록 완전 삭제
+async function deleteArchived(memberId){
+  const m=S.archived.find(x=>x.id===memberId);if(!m)return;
+  if(!confirm('['+m.name+']님의 '+(m.status==='kicked'?'강퇴':'탈퇴')+' 기록을 완전히 삭제합니다.\n이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?'))return;
+  S.archived=S.archived.filter(x=>x.id!==memberId);
+  await save();
+  if(_tab===3)safe(syncDashAll);
+  alert(m.name+' 기록 삭제 완료');
+}
+
+// 기존 archived 회원의 exitDate/사유 수정용
+function fixExitDate(memberId){
+  const m=S.archived.find(x=>x.id===memberId);if(!m)return;
+  _fixExitId=memberId;
+  document.getElementById('fixExitTarget').textContent='대상: '+m.name+' ('+(m.status==='kicked'?'강퇴':'탈퇴')+')';
+  let dv=getRef();
+  if(m.exitDate){
+    const p=m.exitDate.split('/').map(Number);
+    if(p.length===3)dv=p[0]+'-'+String(p[1]).padStart(2,'0')+'-'+String(p[2]).padStart(2,'0');
+  }
+  document.getElementById('fixExitDateInput').value=dv;
+  document.getElementById('fixExitReasonInput').value=m.reason||'';
+  document.getElementById('fixExitMod').style.display='flex';
+}
+let _fixExitId=null;
+async function saveFixExit(){
+  const m=S.archived.find(x=>x.id===_fixExitId);if(!m)return;
+  const dateStr=document.getElementById('fixExitDateInput').value;
+  if(!dateStr){alert('날짜를 입력해주세요.');return;}
+  const reasonInput=(document.getElementById('fixExitReasonInput').value||'').trim();
+  const dt=parseLocalDate(dateStr);
+  const ep=fmtDateParts(dt);
+  m.exitDate=ep.y+'/'+ep.m+'/'+ep.d;
+  if(reasonInput)m.reason=reasonInput;
+  if(m.joindate){
+    const jd=new Date(m.joindate+'T00:00:00');
+    const jp=fmtDateParts(jd);
+    const diffDays=Math.floor((dt-jd)/86400000)+1;
+    m.period=jp.m+'/'+jp.d+'~'+ep.m+'/'+ep.d+'('+diffDays+'일)';
+  }
+  await save();
+  closeM('fixExitMod');
+  if(_tab===3)safe(syncDashAll);
+  alert('수정됐어요! ✅ ('+m.exitDate+')');
+}
 async function addMember(){const name=(document.getElementById('fn').value||'').trim();if(!name){alert('이름 입력');return;}const by=parseInt(document.getElementById('fby').value||'0',10);if(!by||by<1960||by>2010){alert('출생연도(1960~2010) 입력');return;}const jd=document.getElementById('fjd').value||new Date().toISOString().slice(0,10);S.members.push({id:uid(),name,gender:document.getElementById('fg').value||'',birthYear:by,age:kr(by),height:document.getElementById('fh').value||'',mbti:document.getElementById('fm').value||'',role:document.getElementById('fro').value||'일반',grade:document.getElementById('fgr').value||'일반',region:(document.getElementById('frg').value||'').trim(),birth:document.getElementById('fbd').value||'',joindate:jd,note:(document.getElementById('fnt').value||'').trim(),status:'active'});await save();renderMembers();['fn','fby','fh','frg','fbd','fjd','fnt'].forEach(id=>{document.getElementById(id).value='';});['fg','fm','fro','fgr'].forEach(id=>{document.getElementById(id).value='';});document.getElementById('fap').textContent='';}
 
 /* ★수정3: 경고 삭제 */
@@ -602,8 +749,155 @@ async function toggleCx(bId,mId,checked){const b=S.bungs.find(x=>x.id===bId);if(
 async function delBung(id){if(!confirm('이 번개를 삭제하시겠습니까?'))return;S.bungs=S.bungs.filter(b=>b.id!==id);await save();renderBungs();safe(buildAllSels);safe(renderMembers);if(_tab===3)safe(syncDashAll);}
 
 /* ══ 정산 모듈 ══ */
-let stl={bungId:null,members:[],costs:[],opts:{},savedAccts:JSON.parse(localStorage.getItem('paletteAccts4')||'[]')};
-function openSettlement(bId){const b=S.bungs.find(x=>x.id===bId);if(!b)return;stl.bungId=bId;stl.opts={};stl.costs=[{label:'1차',place:'',total:0,liquor:0,drink:0}];const realAtt=b.attendees.filter(id=>!b.cancelled.includes(id));stl.members=realAtt.map(id=>{const p=resolve(id);return{name:p?p.name:id,prepay:0,note:''};});document.getElementById('stl_bName').value=b.title;document.getElementById('stl_bDate').value=b.date;const hostSel=document.getElementById('stl_host');const allNames=activeM().map(m=>m.name);hostSel.innerHTML=allNames.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');const firstHost=stl.members.find(m=>{const mem=S.members.find(x=>x.name===m.name);return mem&&(mem.role==='모임장'||mem.role==='운영진');});hostSel.value=firstHost?firstHost.name:(stl.members[0]?stl.members[0].name:allNames[0]);stlRefreshAcctDropdown();document.getElementById('stl_togMoim').classList.add('on');document.getElementById('stl_togBj').classList.add('on');document.getElementById('stl_togNoBj').classList.remove('on');stlRenderCosts();stlRenderAll();document.getElementById('stlMod').style.display='flex';}
+let stl={bungId:null,sheetId:null,members:[],costs:[],opts:{},manualTotal:{},savedAccts:JSON.parse(localStorage.getItem('paletteAccts4')||'[]')};
+
+function openSettlement(bId){
+  const b=S.bungs.find(x=>x.id===bId);if(!b)return;
+  stl.bungId=bId;
+  document.getElementById('stl_bungTitle').textContent=b.title+(b.date?' '+b.date:'');
+  document.getElementById('stlMod').style.display='flex';
+  stlRefreshAcctDropdown();
+  const hs=document.getElementById('stl_host');
+  hs.innerHTML=activeM().map(m=>'<option value="'+esc(m.name)+'">'+esc(m.name)+'</option>').join('');
+  stlRenderHistList();
+  const list=(S.settlements&&S.settlements[bId])||[];
+  if(list.length)stlLoadSheet(list[list.length-1].id);
+  else stlNewSheet();
+}
+function stlNewSheet(){
+  const b=S.bungs.find(x=>x.id===stl.bungId);if(!b)return;
+  stl.sheetId=null;stl.opts={};stl.manualTotal={};
+  stl.costs=[{label:'1차',place:'',total:0,liquor:0,drink:0}];
+  const realAtt=b.attendees.filter(id=>!b.cancelled.includes(id));
+  stl.members=realAtt.map(id=>{const p=resolve(id);return{name:p?p.name:id,prepay:0,note:''};});
+  document.getElementById('stl_bName').value=b.title;
+  document.getElementById('stl_bDate').value=b.date;
+  const hostSel=document.getElementById('stl_host');
+  const allNames=activeM().map(m=>m.name);
+  hostSel.innerHTML=allNames.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+  const firstHost=stl.members.find(m=>{const mem=S.members.find(x=>x.name===m.name);return mem&&(mem.role==='모임장'||mem.role==='운영진');});
+  hostSel.value=firstHost?firstHost.name:(stl.members[0]?stl.members[0].name:allNames[0]);
+  document.getElementById('stl_togMoim').classList.add('on');
+  document.getElementById('stl_togBj').classList.add('on');
+  document.getElementById('stl_togNoBj').classList.remove('on');
+  document.getElementById('stl_acctInput').value='';
+  stlUpdateAcctDisp();
+  document.getElementById('stl_savedBadge').style.display='none';
+  stlRenderCosts();stlRenderAll();stlRenderHistList();
+}
+function stlLoadSheet(sid){
+  const list=(S.settlements&&S.settlements[stl.bungId])||[];
+  const sheet=list.find(s=>s.id===sid);if(!sheet)return;
+  stl.sheetId=sid;
+  stl.members=JSON.parse(JSON.stringify(sheet.members||[]));
+  stl.costs=JSON.parse(JSON.stringify(sheet.costs||[]));
+  stl.opts=JSON.parse(JSON.stringify(sheet.opts||{}));
+  stl.manualTotal=JSON.parse(JSON.stringify(sheet.manualTotal||{}));
+  document.getElementById('stl_bName').value=sheet.bungTitle||'';
+  document.getElementById('stl_bDate').value=sheet.bungDate||'';
+  const hostSel=document.getElementById('stl_host');
+  const allNames=activeM().map(m=>m.name);
+  hostSel.innerHTML=allNames.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+  hostSel.value=sheet.host||(allNames[0]||'');
+  document.getElementById('stl_acctInput').value=sheet.acct||'';
+  document.getElementById('stl_togMoim').classList.toggle('on',sheet.moimOn!==false);
+  document.getElementById('stl_togBj').classList.toggle('on',sheet.bjOn!==false);
+  document.getElementById('stl_togNoBj').classList.toggle('on',!!sheet.noBj);
+  stlUpdateAcctDisp();
+  document.getElementById('stl_savedBadge').style.display='';
+  stlRenderCosts();stlRenderAll();stlRenderHistList();
+}
+async function stlSaveSheet(){
+  if(!S.settlements)S.settlements={};
+  if(!S.settlements[stl.bungId])S.settlements[stl.bungId]=[];
+  const b=S.bungs.find(x=>x.id===stl.bungId);
+  const sheet={
+    id:stl.sheetId||uid(),
+    savedAt:new Date().toISOString(),
+    bungTitle:b?b.title:document.getElementById('stl_bName').value,
+    bungDate:b?b.date:document.getElementById('stl_bDate').value,
+    host:document.getElementById('stl_host').value,
+    acct:document.getElementById('stl_acctInput').value,
+    moimOn:document.getElementById('stl_togMoim').classList.contains('on'),
+    bjOn:document.getElementById('stl_togBj').classList.contains('on'),
+    noBj:document.getElementById('stl_togNoBj').classList.contains('on'),
+    members:JSON.parse(JSON.stringify(stl.members)),
+    costs:JSON.parse(JSON.stringify(stl.costs)),
+    opts:JSON.parse(JSON.stringify(stl.opts)),
+    manualTotal:JSON.parse(JSON.stringify(stl.manualTotal))
+  };
+  const list=S.settlements[stl.bungId];
+  const idx=list.findIndex(s=>s.id===sheet.id);
+  if(idx>=0)list[idx]=sheet;else list.push(sheet);
+  stl.sheetId=sheet.id;
+  await save();
+  document.getElementById('stl_savedBadge').style.display='';
+  stlRenderHistList();
+  if(_tab===2)safe(renderBungs);
+  alert('정산이 저장됐어요! ✅');
+}
+async function stlDeleteSheet(sid){
+  if(!confirm('이 정산 기록을 삭제할까요?'))return;
+  S.settlements[stl.bungId]=(S.settlements[stl.bungId]||[]).filter(s=>s.id!==sid);
+  await save();
+  if(stl.sheetId===sid)stlNewSheet();else stlRenderHistList();
+  if(_tab===2)safe(renderBungs);
+}
+function stlRenderHistList(){
+  const el=document.getElementById('stl_histList');if(!el)return;
+  const list=((S.settlements&&S.settlements[stl.bungId])||[]).slice().reverse();
+  if(!list.length){el.innerHTML='<p style="font-size:11px;color:#94a3b8;text-align:center;padding:8px 0;">저장된 정산 없음</p>';return;}
+  el.innerHTML=list.map(s=>{
+    const dt=new Date(s.savedAt);
+    const label=(dt.getMonth()+1)+'/'+(dt.getDate())+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+    const total=(s.members||[]).reduce((acc,m,mi)=>acc+stlCalcTotalFromSheet(s,mi),0);
+    const isAct=stl.sheetId===s.id;
+    const sid=esc(s.id);
+    return '<div class="sv'+(isAct?' active':'')+'" onclick="stlLoadSheet(\''+sid+'\')"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;color:#5b21b6;">'+esc(label)+'</div><div style="font-size:10px;color:#7c3aed;margin-top:2px;">벙주: '+esc(s.host||'-')+'</div><div style="font-size:10px;color:#059669;margin-top:1px;">총 '+total.toLocaleString()+'원</div></div><button onclick="event.stopPropagation();stlDeleteSheet(\''+sid+'\')" style="background:none;border:none;font-size:14px;cursor:pointer;color:#fca5a5;padding:0;">🗑</button></div></div>';
+  }).join('');
+}
+function stlCalcTotalFromSheet(sheet,mi){
+  if(sheet.manualTotal&&sheet.manualTotal[mi]!=null)return sheet.manualTotal[mi];
+  const m=sheet.members[mi];if(!m)return 0;
+  const isHost=m.name===sheet.host;
+  let t=0;
+  (sheet.costs||[]).forEach((c,ci)=>{const sh=stlCalcSharesFrom(sheet,ci);t+=sh[mi]||0;});
+  if(!isHost&&sheet.moimOn!==false)t+=1000;
+  if(!isHost&&sheet.bjOn!==false)t+=1000;
+  t-=m.prepay||0;
+  return t;
+}
+function stlCalcSharesFrom(sheet,ci){
+  const c=sheet.costs[ci];if(!c)return [];
+  const n=sheet.members.length;
+  const active=sheet.members.map((x,mi)=>!(sheet.opts[mi]&&sheet.opts[mi][ci]&&sheet.opts[mi][ci].exempt));
+  const aC=active.filter(Boolean).length;if(!aC)return sheet.members.map(()=>0);
+  const nal=sheet.members.map((x,mi)=>!!(sheet.opts[mi]&&sheet.opts[mi][ci]&&sheet.opts[mi][ci].nalcohol)&&active[mi]);
+  const nC=nal.filter(Boolean).length;const normC=aC-nC;
+  const food=c.total-c.liquor-c.drink;
+  const base=sheet.members.map((x,mi)=>{if(!active[mi])return 0;let s=food/aC;if(nal[mi]){s+=nC>0?c.drink/nC:0;}else{s+=normC>0?c.liquor/normC:0;s+=aC>0?c.drink/aC:0;}return s;});
+  const lateAmts=sheet.members.map((x,mi)=>active[mi]?+(sheet.opts[mi]&&sheet.opts[mi][ci]?sheet.opts[mi][ci].late||0:0):0);
+  const tLate=lateAmts.reduce((a,b)=>a+b,0);
+  const redist=sheet.members.map((x,mi)=>active[mi]&&lateAmts[mi]===0);
+  const rC=redist.filter(Boolean).length;
+  const fin=sheet.members.map((x,mi)=>{if(!active[mi])return 0;let s=base[mi]-lateAmts[mi];if(redist[mi]&&rC>0)s+=tLate/rC;return Math.max(0,Math.round(s));});
+  const sum=fin.reduce((a,b)=>a+b,0);
+  let diff=c.total-sum;
+  if(diff!==0){
+    const activeIdxs=[];
+    for(let i=0;i<n;i++){if(active[i])activeIdxs.push(i);}
+    const step=diff>0?1:-1;
+    let remaining=Math.abs(diff);
+    let p=0;
+    while(remaining>0&&activeIdxs.length>0){
+      const idx=activeIdxs[p%activeIdxs.length];
+      fin[idx]+=step;
+      remaining--;
+      p++;
+    }
+  }
+  return fin;
+}
 function stlRefreshAcctDropdown(){const sel=document.getElementById('stl_acctSel');sel.innerHTML='<option value="">직접 입력</option>'+stl.savedAccts.map(a=>'<option value="'+esc(a)+'">'+esc(a)+'</option>').join('');}
 function stlLoadAcct(){const v=document.getElementById('stl_acctSel').value;if(v){document.getElementById('stl_acctInput').value=v;stlUpdateAcctDisp();}}
 function stlSaveAcct(){const v=(document.getElementById('stl_acctInput').value||'').trim();if(!v)return;if(!stl.savedAccts.includes(v)){stl.savedAccts.unshift(v);if(stl.savedAccts.length>5)stl.savedAccts.pop();}localStorage.setItem('paletteAccts4',JSON.stringify(stl.savedAccts));stlRefreshAcctDropdown();document.getElementById('stl_acctSel').value=v;alert('계좌 저장됐어요! ✅');}
@@ -612,23 +906,220 @@ function stlTog(id){document.getElementById(id).classList.toggle('on');stlRender
 function stlTogNoBj(){const el=document.getElementById('stl_togNoBj');el.classList.toggle('on');if(el.classList.contains('on'))document.getElementById('stl_togBj').classList.remove('on');else document.getElementById('stl_togBj').classList.add('on');stlRenderAll();}
 function stlAddCost(){stl.costs.push({label:(stl.costs.length+1)+'차',place:'',total:0,liquor:0,drink:0});stlRenderCosts();stlRenderAll();}
 function stlRemoveCost(i){stl.costs.splice(i,1);const no={};Object.keys(stl.opts).forEach(mi=>{no[mi]={};Object.keys(stl.opts[mi]).forEach(ci=>{const nci=+ci<i?+ci:(+ci>i?+ci-1:-1);if(nci>=0)no[mi][nci]=stl.opts[mi][ci];});});stl.opts=no;stlRenderCosts();stlRenderAll();}
-function stlRenderCosts(){const d=document.getElementById('stl_costItems');d.innerHTML='';stl.costs.forEach((c,i)=>{const div=document.createElement('div');div.style.cssText='display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap;border-bottom:0.5px solid #f1f5f9;padding-bottom:9px;margin-bottom:9px;';div.innerHTML='<div style="flex:0 0 50px"><span class="stl-lbl">차수</span><input class="stl-input" value="'+esc(c.label)+'" oninput="stl.costs['+i+'].label=this.value;stlRenderAll()" style="text-align:center"/></div>'+'<div style="flex:2;min-width:80px"><span class="stl-lbl">장소명</span><input class="stl-input" value="'+esc(c.place)+'" placeholder="장소" oninput="stl.costs['+i+'].place=this.value"/></div>'+'<div style="flex:1;min-width:72px"><span class="stl-lbl">총액</span><input class="stl-input" type="number" value="'+(c.total||'')+'" placeholder="0" oninput="stl.costs['+i+'].total=+this.value||0;stlRenderAll()" style="text-align:right"/></div>'+'<div style="flex:1;min-width:72px"><span class="stl-lbl">주류금액</span><input class="stl-input" type="number" value="'+(c.liquor||'')+'" placeholder="0" oninput="stl.costs['+i+'].liquor=+this.value||0;stlRenderAll()" style="text-align:right"/></div>'+'<div style="flex:1;min-width:72px"><span class="stl-lbl">음료금액</span><input class="stl-input" type="number" value="'+(c.drink||'')+'" placeholder="0" oninput="stl.costs['+i+'].drink=+this.value||0;stlRenderAll()" style="text-align:right"/></div>'+'<button class="stl-btn stl-btn-danger" onclick="stlRemoveCost('+i+')" style="margin-bottom:1px;">🗑</button>';d.appendChild(div);});}
+function stlRenderCosts(){
+  const d=document.getElementById('stl_costItems');d.innerHTML='';
+  stl.costs.forEach((c,i)=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap;border-bottom:0.5px solid #f1f5f9;padding-bottom:9px;margin-bottom:9px;';
+    div.innerHTML='<div style="flex:0 0 50px"><span class="stl-lbl">차수</span><input class="stl-input" value="'+esc(c.label)+'" oninput="stl.costs['+i+'].label=this.value;stlRenderAll()" style="text-align:center"/></div>'
+      +'<div style="flex:2;min-width:80px"><span class="stl-lbl">장소명</span><input class="stl-input" value="'+esc(c.place)+'" placeholder="장소" oninput="stl.costs['+i+'].place=this.value;stlRenderAll()"/></div>'
+      +'<div style="flex:1;min-width:72px"><span class="stl-lbl">총액</span><input class="stl-input" type="number" value="'+(c.total||'')+'" placeholder="0" oninput="stl.costs['+i+'].total=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>'
+      +'<div style="flex:1;min-width:72px"><span class="stl-lbl">주류금액</span><input class="stl-input" type="number" value="'+(c.liquor||'')+'" placeholder="0" oninput="stl.costs['+i+'].liquor=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>'
+      +'<div style="flex:1;min-width:72px"><span class="stl-lbl">음료금액</span><input class="stl-input" type="number" value="'+(c.drink||'')+'" placeholder="0" oninput="stl.costs['+i+'].drink=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>'
+      +'<button class="stl-btn stl-btn-danger" onclick="stlRemoveCost('+i+')" style="margin-bottom:1px;">🗑</button>';
+    d.appendChild(div);
+  });
+}
 function stlGetOpt(mi,ci,k){return !!(stl.opts[mi]&&stl.opts[mi][ci]&&stl.opts[mi][ci][k]);}
 function stlGetLate(mi,ci){return stl.opts[mi]&&stl.opts[mi][ci]?+stl.opts[mi][ci].late||0:0;}
-function stlSetOpt(mi,ci,k,v){if(!stl.opts[mi])stl.opts[mi]={};if(!stl.opts[mi][ci])stl.opts[mi][ci]={};stl.opts[mi][ci][k]=v;stlRenderAll();}
-function stlSetLate(mi,ci,v){if(!stl.opts[mi])stl.opts[mi]={};if(!stl.opts[mi][ci])stl.opts[mi][ci]={};stl.opts[mi][ci].late=+v||0;stlRenderAll();}
-function stlCalcShares(ci){const c=stl.costs[ci];if(!c)return stl.members.map(()=>0);const n=stl.members.length;const active=stl.members.map((_,mi)=>!stlGetOpt(mi,ci,'exempt'));const activeCount=active.filter(Boolean).length;if(!activeCount)return stl.members.map(()=>0);const nalcohol=stl.members.map((_,mi)=>stlGetOpt(mi,ci,'nalcohol')&&active[mi]);const nalcCount=nalcohol.filter(Boolean).length;const normCount=activeCount-nalcCount;const food=c.total-c.liquor-c.drink;const baseShare=stl.members.map((_,mi)=>{if(!active[mi])return 0;let s=food/activeCount;if(nalcohol[mi]){s+=nalcCount>0?c.drink/nalcCount:0;}else{s+=normCount>0?c.liquor/normCount:0;s+=activeCount>0?c.drink/activeCount:0;}return s;});const lateAmts=stl.members.map((_,mi)=>active[mi]?stlGetLate(mi,ci):0);const totalLate=lateAmts.reduce((a,b)=>a+b,0);const redistribute=stl.members.map((_,mi)=>active[mi]&&lateAmts[mi]===0);const redistCount=redistribute.filter(Boolean).length;const finalShare=stl.members.map((_,mi)=>{if(!active[mi])return 0;let s=baseShare[mi]-lateAmts[mi];if(redistribute[mi]&&redistCount>0)s+=totalLate/redistCount;return Math.max(0,Math.round(s));});const sum=finalShare.reduce((a,b)=>a+b,0);const diff=c.total-sum;if(diff!==0){for(let mi=n-1;mi>=0;mi--){if(active[mi]){finalShare[mi]+=diff;break;}}}return finalShare;}
-function stlCalcTotal(mi){const host=document.getElementById('stl_host').value;const isHost=stl.members[mi].name===host;const moimOn=document.getElementById('stl_togMoim').classList.contains('on');const bjOn=document.getElementById('stl_togBj').classList.contains('on');let t=0;stl.costs.forEach((_,ci)=>{const s=stlCalcShares(ci);t+=s[mi];});if(!isHost&&moimOn)t+=1000;if(!isHost&&bjOn)t+=1000;t-=stl.members[mi].prepay;return t;}
+function stlSetOpt(mi,ci,k,v){if(!stl.opts[mi])stl.opts[mi]={};if(!stl.opts[mi][ci])stl.opts[mi][ci]={};stl.opts[mi][ci][k]=v;stl.manualTotal={};stlRenderAll();}
+function stlSetLate(mi,ci,v){if(!stl.opts[mi])stl.opts[mi]={};if(!stl.opts[mi][ci])stl.opts[mi][ci]={};stl.opts[mi][ci].late=+v||0;stl.manualTotal={};stlRenderAll();}
+
+// 차수별 1/n 배분 (늦참 재분배 포함) — 선입금/모임비/벙주비는 여기 포함 안 됨
+function stlCalcShares(ci){
+  const c=stl.costs[ci];if(!c)return stl.members.map(()=>0);
+  const n=stl.members.length;
+  const active=stl.members.map((x,mi)=>!stlGetOpt(mi,ci,'exempt'));
+  const activeCount=active.filter(Boolean).length;if(!activeCount)return stl.members.map(()=>0);
+  const nalcohol=stl.members.map((x,mi)=>stlGetOpt(mi,ci,'nalcohol')&&active[mi]);
+  const nalcCount=nalcohol.filter(Boolean).length;
+  const normCount=activeCount-nalcCount;
+  const food=c.total-c.liquor-c.drink;
+  // 기본 배분: 음식은 활성 인원 전체 1/n, 주류는 일반(논알콜 제외) 인원 1/n, 음료는 전체 1/n
+  const baseShare=stl.members.map((x,mi)=>{
+    if(!active[mi])return 0;
+    let s=food/activeCount;
+    if(nalcohol[mi]){s+=nalcCount>0?c.drink/nalcCount:0;}
+    else{s+=normCount>0?c.liquor/normCount:0;s+=activeCount>0?c.drink/activeCount:0;}
+    return s;
+  });
+  const lateAmts=stl.members.map((x,mi)=>active[mi]?stlGetLate(mi,ci):0);
+  const totalLate=lateAmts.reduce((a,b)=>a+b,0);
+  const redistribute=stl.members.map((x,mi)=>active[mi]&&lateAmts[mi]===0);
+  const redistCount=redistribute.filter(Boolean).length;
+  const finalShare=stl.members.map((x,mi)=>{
+    if(!active[mi])return 0;
+    let s=baseShare[mi]-lateAmts[mi];
+    if(redistribute[mi]&&redistCount>0)s+=totalLate/redistCount;
+    return Math.max(0,Math.round(s));
+  });
+  // 반올림 오차를 활성 인원 전체에 1원씩 순차 분배 (한 사람에게 몰리지 않도록)
+  const sum=finalShare.reduce((a,b)=>a+b,0);
+  let diff=c.total-sum;
+  if(diff!==0){
+    const activeIdxs=[];
+    for(let i=0;i<n;i++){if(active[i])activeIdxs.push(i);}
+    const step=diff>0?1:-1;
+    let remaining=Math.abs(diff);
+    let p=0;
+    while(remaining>0&&activeIdxs.length>0){
+      const idx=activeIdxs[p%activeIdxs.length];
+      finalShare[idx]+=step;
+      remaining--;
+      p++;
+    }
+  }
+  return finalShare;
+}
+
+// 자동 계산 정산비용 (수동 수정 반영 전)
+function stlCalcAutoTotal(mi){
+  const host=document.getElementById('stl_host').value;
+  const isHost=stl.members[mi].name===host;
+  const moimOn=document.getElementById('stl_togMoim').classList.contains('on');
+  const bjOn=document.getElementById('stl_togBj').classList.contains('on');
+  let t=0;
+  stl.costs.forEach((c,ci)=>{const s=stlCalcShares(ci);t+=s[mi];});
+  if(!isHost&&moimOn)t+=1000;
+  if(!isHost&&bjOn)t+=1000;
+  t-=stl.members[mi].prepay||0;
+  return t;
+}
+// 최종 정산비용 (수동 오버라이드 있으면 그 값 사용)
+function stlCalcTotal(mi){
+  if(stl.manualTotal&&stl.manualTotal[mi]!=null)return stl.manualTotal[mi];
+  return stlCalcAutoTotal(mi);
+}
+// 정산비용 수기 수정 → 차액을 (이 인원 제외) 나머지 활성 인원에게 균등 재분배
+function stlEditTotal(mi,newValStr){
+  const newVal=Math.round(+String(newValStr).replace(/[^0-9.\-]/g,'')||0);
+  const before=stlCalcTotal(mi);
+  const diff=newVal-before;
+  if(!stl.manualTotal)stl.manualTotal={};
+  stl.manualTotal[mi]=newVal;
+  if(diff!==0){
+    const others=stl.members.map((x,i)=>i).filter(i=>i!==mi);
+    if(others.length>0){
+      const share=diff/others.length;
+      others.forEach((i,idx)=>{
+        const cur=stl.manualTotal[i]!=null?stl.manualTotal[i]:stlCalcAutoTotal(i);
+        let adj=cur-share;
+        if(idx===others.length-1){
+          // 마지막 인원에서 반올림 오차 보정
+          const sumSoFar=others.slice(0,-1).reduce((acc,j)=>acc+(stl.manualTotal[j]!=null?stl.manualTotal[j]:Math.round(stlCalcAutoTotal(j)-share)),0);
+          const grandBefore=stl.members.reduce((acc,x,i2)=>acc+(stl.manualTotal[i2]!=null&&i2!==mi&&!others.includes(i2)?stl.manualTotal[i2]:0),0);
+        }
+        stl.manualTotal[i]=Math.round(adj);
+      });
+    }
+  }
+  stlRenderAll();
+}
+function stlResetManual(){stl.manualTotal={};stlRenderAll();}
+
 function stlRenderAll(){stlRenderMainTable();stlRenderOptTable();stlRenderResult();}
-function stlRenderMainTable(){const host=document.getElementById('stl_host').value;const moimOn=document.getElementById('stl_togMoim').classList.contains('on');const bjOn=document.getElementById('stl_togBj').classList.contains('on');const head=document.getElementById('stl_mainHead');const body=document.getElementById('stl_mainBody');const foot=document.getElementById('stl_mainFoot');head.innerHTML='';body.innerHTML='';foot.innerHTML='';const htr=document.createElement('tr');htr.innerHTML='<th>번호</th><th>이름</th>';
-/* ★수정2: 헤더에 장소명 포함 */
-stl.costs.forEach(c=>htr.innerHTML+='<th>'+esc(c.label)+(c.place?' '+esc(c.place):'')+'</th>');
-htr.innerHTML+='<th>모임비</th><th>벙주비</th><th>선입금</th><th style="color:#5b21b6;">정산비용</th><th>비고</th><th></th>';head.appendChild(htr);const allShares=stl.costs.map((_,ci)=>stlCalcShares(ci));let grandTotal=0,totalMoim=0,totalBj=0,totalPrepay=0;stl.members.forEach((m,mi)=>{const isHost=m.name===host;const total=stlCalcTotal(mi);grandTotal+=total;const moim=(!isHost&&moimOn)?1000:0;const bj=(!isHost&&bjOn)?1000:0;totalMoim+=moim;totalBj+=bj;totalPrepay+=m.prepay;const tr=document.createElement('tr');const allNames=activeM().map(x=>x.name);const nameOpts=allNames.map(n=>'<option value="'+esc(n)+'"'+(m.name===n?' selected':'')+'>'+esc(n)+'</option>').join('');let cells='<td style="color:#94a3b8;">'+(mi+1)+'</td>';cells+='<td class="sn"><select style="font-size:11px;padding:2px 4px;min-width:65px;border:1px solid #e2e8f0;border-radius:5px;" onchange="stl.members['+mi+'].name=this.value;stlRenderAll()">'+nameOpts+'</select>'+(isHost?'<span class="stl-badge-host">벙주</span>':'')+'</td>';stl.costs.forEach((_,ci)=>{const s=allShares[ci][mi];cells+='<td>'+(s>0?s.toLocaleString():'-')+'</td>';});cells+='<td style="color:#94a3b8;">'+(moim>0?moim.toLocaleString():'-')+'</td>';cells+='<td style="color:#94a3b8;">'+(bj>0?bj.toLocaleString():'-')+'</td>';cells+='<td><input type="number" value="'+(m.prepay||'')+'" placeholder="0" style="width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" oninput="stl.members['+mi+'].prepay=+this.value||0;stlRenderAll()"/></td>';cells+='<td class="stl-amt">'+total.toLocaleString()+'</td>';cells+='<td><input value="'+esc(m.note)+'" placeholder="비고" style="min-width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" oninput="stl.members['+mi+'].note=this.value"/></td>';cells+='<td><button class="stl-btn stl-btn-danger" onclick="stl.members.splice('+mi+',1);delete stl.opts['+mi+'];stlRenderAll()">✕</button></td>';tr.innerHTML=cells;body.appendChild(tr);});const ftr=document.createElement('tr');ftr.innerHTML='<td colspan="2" style="text-align:left;padding-left:6px;">합계</td>';stl.costs.forEach((c)=>ftr.innerHTML+='<td>'+(c.total>0?c.total.toLocaleString():'-')+'</td>');ftr.innerHTML+='<td>'+(totalMoim>0?totalMoim.toLocaleString():'-')+'</td><td>'+(totalBj>0?totalBj.toLocaleString():'-')+'</td><td>'+(totalPrepay>0?'-'+totalPrepay.toLocaleString():'-')+'</td><td class="stl-amt">'+grandTotal.toLocaleString()+'</td><td></td><td></td>';foot.appendChild(ftr);}
-function stlRenderOptTable(){const head=document.getElementById('stl_optHead');const body=document.getElementById('stl_optBody');head.innerHTML='';body.innerHTML='';const h1=document.createElement('tr');h1.innerHTML='<th>이름</th>';stl.costs.forEach(c=>h1.innerHTML+='<th colspan="3">'+esc(c.label)+(c.place?' '+esc(c.place):'')+'</th>');const h2=document.createElement('tr');h2.innerHTML='<th></th>';stl.costs.forEach(()=>h2.innerHTML+='<th>논알콜</th><th>늦참차감(원)</th><th>면제</th>');head.appendChild(h1);head.appendChild(h2);stl.members.forEach((m,mi)=>{const tr=document.createElement('tr');let cells='<td class="sn">'+esc(m.name)+'</td>';stl.costs.forEach((_,ci)=>{cells+='<td><input type="checkbox" '+(stlGetOpt(mi,ci,'nalcohol')?'checked':'')+' onchange="stlSetOpt('+mi+','+ci+',\'nalcohol\',this.checked)"/></td>';cells+='<td><input type="number" value="'+(stlGetLate(mi,ci)||'')+'" placeholder="0" style="width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" onchange="stlSetLate('+mi+','+ci+',this.value)"/></td>';cells+='<td><input type="checkbox" '+(stlGetOpt(mi,ci,'exempt')?'checked':'')+' onchange="stlSetOpt('+mi+','+ci+',\'exempt\',this.checked)"/></td>';});tr.innerHTML=cells;body.appendChild(tr);});}
-function stlRenderResult(){const host=document.getElementById('stl_host').value;const el=document.getElementById('stl_resultRows');el.innerHTML=stl.members.map((m,mi)=>{const t=stlCalcTotal(mi);return'<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;"><span>'+esc(m.name)+(m.name===host?' 🎯':'')+(m.note?' <span style="color:#94a3b8;font-size:10px;">('+esc(m.note)+')</span>':'')+'</span><span class="stl-amt">'+t.toLocaleString()+'원</span></div>';}).join('');}
-function stlAddMember(){const used=new Set(stl.members.map(m=>m.name));const first=activeM().find(m=>!used.has(m.name));stl.members.push({name:first?first.name:activeM()[0]?.name||'',prepay:0,note:''});stlRenderAll();}
-function stlCopyResult(){const host=document.getElementById('stl_host').value;const acct=document.getElementById('stl_acctInput').value||'—';const date=document.getElementById('stl_bDate').value;const name=document.getElementById('stl_bName').value;const lines=['['+name+' 정산]','날짜: '+date+'  벙주: '+host,''];stl.members.forEach((m,mi)=>lines.push(m.name+': '+stlCalcTotal(mi).toLocaleString()+'원'+(m.note?' ('+m.note+')':'')));lines.push('');lines.push('입금계좌: '+acct);navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('복사됐어요! ✅'));}
-function stlCopyKakao(){const host=document.getElementById('stl_host').value;const acct=document.getElementById('stl_acctInput').value||'—';const date=document.getElementById('stl_bDate').value;const name=document.getElementById('stl_bName').value;const lines=['🎨 '+name+' 정산 안내 🎨','📅 '+date,'','💜 정산금액'];stl.members.forEach((m,mi)=>{if(m.name!==host)lines.push('• '+m.name+': '+stlCalcTotal(mi).toLocaleString()+'원');});lines.push('');lines.push('💳 입금계좌');lines.push(acct);lines.push('');lines.push('정산 확인 후 입금 부탁드려요 🙏');navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('카카오 공지 복사됐어요! 💬'));}
+function stlRenderMainTable(){
+  const host=document.getElementById('stl_host').value;
+  const moimOn=document.getElementById('stl_togMoim').classList.contains('on');
+  const bjOn=document.getElementById('stl_togBj').classList.contains('on');
+  const head=document.getElementById('stl_mainHead');
+  const body=document.getElementById('stl_mainBody');
+  const foot=document.getElementById('stl_mainFoot');
+  head.innerHTML='';body.innerHTML='';foot.innerHTML='';
+  const htr=document.createElement('tr');
+  htr.innerHTML='<th>번호</th><th>이름</th>';
+  stl.costs.forEach(c=>htr.innerHTML+='<th>'+esc(c.label)+(c.place?' '+esc(c.place):'')+'</th>');
+  htr.innerHTML+='<th>모임비</th><th>벙주비</th><th>선입금</th><th style="color:#5b21b6;">정산비용</th><th>비고</th><th></th>';
+  head.appendChild(htr);
+  const allShares=stl.costs.map((c,ci)=>stlCalcShares(ci));
+  let grandTotal=0,totalMoim=0,totalBj=0,totalPrepay=0;
+  const hasManual=stl.manualTotal&&Object.keys(stl.manualTotal).length>0;
+  stl.members.forEach((m,mi)=>{
+    const isHost=m.name===host;
+    const total=stlCalcTotal(mi);
+    grandTotal+=total;
+    const moim=(!isHost&&moimOn)?1000:0;
+    const bj=(!isHost&&bjOn)?1000:0;
+    totalMoim+=moim;totalBj+=bj;totalPrepay+=(m.prepay||0);
+    const tr=document.createElement('tr');
+    const allNames=activeM().map(x=>x.name);
+    const nameOpts=allNames.map(n=>'<option value="'+esc(n)+'"'+(m.name===n?' selected':'')+'>'+esc(n)+'</option>').join('');
+    let cells='<td style="color:#94a3b8;">'+(mi+1)+'</td>';
+    cells+='<td class="sn"><select style="font-size:11px;padding:2px 4px;min-width:65px;border:1px solid #e2e8f0;border-radius:5px;" onchange="stl.members['+mi+'].name=this.value;stlRenderAll()">'+nameOpts+'</select>'+(isHost?'<span class="stl-badge-host">벙주</span>':'')+'</td>';
+    stl.costs.forEach((c,ci)=>{const s=allShares[ci][mi];cells+='<td>'+(s>0?s.toLocaleString():'-')+'</td>';});
+    cells+='<td style="color:#94a3b8;">'+(moim>0?moim.toLocaleString():'-')+'</td>';
+    cells+='<td style="color:#94a3b8;">'+(bj>0?bj.toLocaleString():'-')+'</td>';
+    cells+='<td><input type="text" inputmode="numeric" value="'+((m.prepay||0)>0?(m.prepay).toLocaleString():'')+'" placeholder="0" style="width:70px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;text-align:right;" onfocus="this.value=this.value.replace(/,/g,\'\')" onblur="stl.members['+mi+'].prepay=+this.value.replace(/[^0-9]/g,\'\')||0;stl.manualTotal={};stlRenderAll()" onkeydown="if(event.key===\'Enter\')this.blur()"/></td>';
+    cells+='<td><input type="text" inputmode="numeric" class="stl-amt" value="'+total.toLocaleString()+'" style="width:75px;font-weight:700;color:#5b21b6;border:1px solid #ddd6fe;border-radius:5px;padding:3px 5px;text-align:right;background:#faf5ff;" onfocus="this.value=this.value.replace(/,/g,\'\')" onblur="stlEditTotal('+mi+',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"/></td>';
+    cells+='<td><input value="'+esc(m.note)+'" placeholder="비고" style="min-width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" oninput="stl.members['+mi+'].note=this.value"/></td>';
+    cells+='<td><button class="stl-btn stl-btn-danger" onclick="stl.members.splice('+mi+',1);delete stl.opts['+mi+'];stl.manualTotal={};stlRenderAll()">✕</button></td>';
+    tr.innerHTML=cells;body.appendChild(tr);
+  });
+  const ftr=document.createElement('tr');
+  ftr.innerHTML='<td colspan="2" style="text-align:left;padding-left:6px;">합계'+(hasManual?' <button onclick="stlResetManual()" style="font-size:9px;color:#dc2626;background:none;border:none;cursor:pointer;text-decoration:underline;">(수동수정 초기화)</button>':'')+'</td>';
+  stl.costs.forEach(c=>ftr.innerHTML+='<td>'+(c.total>0?c.total.toLocaleString():'-')+'</td>');
+  ftr.innerHTML+='<td>'+(totalMoim>0?totalMoim.toLocaleString():'-')+'</td>';
+  ftr.innerHTML+='<td>'+(totalBj>0?totalBj.toLocaleString():'-')+'</td>';
+  ftr.innerHTML+='<td>'+(totalPrepay>0?'-'+totalPrepay.toLocaleString():'-')+'</td>';
+  ftr.innerHTML+='<td class="stl-amt">'+grandTotal.toLocaleString()+'</td><td></td><td></td>';
+  foot.appendChild(ftr);
+}
+function stlRenderOptTable(){
+  const head=document.getElementById('stl_optHead');
+  const body=document.getElementById('stl_optBody');
+  head.innerHTML='';body.innerHTML='';
+  const h1=document.createElement('tr');h1.innerHTML='<th>이름</th>';
+  stl.costs.forEach(c=>h1.innerHTML+='<th colspan="3">'+esc(c.label)+(c.place?' '+esc(c.place):'')+'</th>');
+  const h2=document.createElement('tr');h2.innerHTML='<th></th>';
+  stl.costs.forEach(()=>h2.innerHTML+='<th>논알콜</th><th>늦참차감(원)</th><th>면제</th>');
+  head.appendChild(h1);head.appendChild(h2);
+  stl.members.forEach((m,mi)=>{
+    const tr=document.createElement('tr');
+    let cells='<td class="sn">'+esc(m.name)+'</td>';
+    stl.costs.forEach((c,ci)=>{
+      cells+='<td><input type="checkbox" '+(stlGetOpt(mi,ci,'nalcohol')?'checked':'')+' onchange="stlSetOpt('+mi+','+ci+',\'nalcohol\',this.checked)"/></td>';
+      cells+='<td><input type="number" value="'+(stlGetLate(mi,ci)||'')+'" placeholder="0" style="width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" onchange="stlSetLate('+mi+','+ci+',this.value)"/></td>';
+      cells+='<td><input type="checkbox" '+(stlGetOpt(mi,ci,'exempt')?'checked':'')+' onchange="stlSetOpt('+mi+','+ci+',\'exempt\',this.checked)"/></td>';
+    });
+    tr.innerHTML=cells;body.appendChild(tr);
+  });
+}
+function stlRenderResult(){
+  const host=document.getElementById('stl_host').value;
+  const el=document.getElementById('stl_resultRows');
+  el.innerHTML=stl.members.map((m,mi)=>{
+    const t=stlCalcTotal(mi);
+    return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:0.5px solid #f1f5f9;"><span>'+esc(m.name)+(m.name===host?' 🎯':'')+(m.note?' <span style="color:#94a3b8;font-size:10px;">('+esc(m.note)+')</span>':'')+'</span><span class="stl-amt">'+t.toLocaleString()+'원</span></div>';
+  }).join('');
+}
+function stlAddMember(){
+  const used=new Set(stl.members.map(m=>m.name));
+  const first=activeM().find(m=>!used.has(m.name));
+  stl.members.push({name:first?first.name:(activeM()[0]?activeM()[0].name:''),prepay:0,note:''});
+  stl.manualTotal={};
+  stlRenderAll();
+}
+function stlCopyResult(){
+  const host=document.getElementById('stl_host').value;
+  const acct=document.getElementById('stl_acctInput').value||'—';
+  const date=document.getElementById('stl_bDate').value;
+  const name=document.getElementById('stl_bName').value;
+  const lines=['['+name+' 정산]','날짜: '+date+'  벙주: '+host,''];
+  stl.members.forEach((m,mi)=>lines.push(m.name+': '+stlCalcTotal(mi).toLocaleString()+'원'+(m.note?' ('+m.note+')':'')));
+  lines.push('');lines.push('입금계좌: '+acct);
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('복사됐어요! ✅'));
+}
+function stlCopyKakao(){
+  const host=document.getElementById('stl_host').value;
+  const acct=document.getElementById('stl_acctInput').value||'—';
+  const date=document.getElementById('stl_bDate').value;
+  const name=document.getElementById('stl_bName').value;
+  const lines=['🎨 '+name+' 정산 안내 🎨','📅 '+date,'','💜 정산금액'];
+  stl.members.forEach((m,mi)=>{if(m.name!==host)lines.push('• '+m.name+': '+stlCalcTotal(mi).toLocaleString()+'원');});
+  lines.push('');lines.push('💳 입금계좌');lines.push(acct);
+  lines.push('');lines.push('정산 확인 후 입금 부탁드려요 🙏');
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>alert('카카오 공지 복사됐어요! 💬'));
+}
 
 /* ══ DASHBOARD ══ */
 function buildDashYM(){const keys=allMK();const years=[...new Set(keys.map(k=>k.split('-')[0]))].sort();const ysel=document.getElementById('dY');const msel=document.getElementById('dM');if(!ysel||!msel)return;const cy=ysel.value,cm=msel.value;ysel.innerHTML='<option value="">연도</option>'+years.map(y=>'<option value="'+y+'"'+(y===cy?' selected':'')+'>'+y+'년</option>').join('');msel.innerHTML='<option value="">월</option>'+['01','02','03','04','05','06','07','08','09','10','11','12'].map(m=>'<option value="'+m+'"'+(m===cm?' selected':'')+'>'+parseInt(m)+'월</option>').join('');if(!cy&&years.length){const lk=latestK();if(lk){const[ly,lm]=lk.split('-');ysel.value=ly;msel.value=lm;}}GF.all=false;}
@@ -664,7 +1155,7 @@ function renderArchived(k){
     const delBtn=w.id?'<td><button class="btn bred" style="padding:2px 7px;font-size:10px;" onclick="safe(deleteWarning,\''+esc(w.id)+'\')">🗑</button></td>':'<td></td>';
     return'<tr><td><strong>'+esc(w.name)+'</strong></td><td style="font-size:10px;">'+esc(w.date)+'</td><td><span class="pill '+(w.type==='경고'?'pamb':'pr')+'">'+esc(w.type)+'</span></td><td style="font-size:10px;color:var(--sb);">'+esc(w.reason)+'</td>'+delBtn+'</tr>';
   }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--mt);padding:8px;">없음</td></tr>';
-  const allRj=S.rejects||[];const filtRj=key==='ALL'?allRj:allRj.filter(r=>r.rejectDate&&dtKey(r.rejectDate)===key);const rjM=filtRj.filter(r=>r.gender==='남').length,rjF=filtRj.filter(r=>r.gender==='여').length;const rjCt=document.getElementById('rjCt');if(rjCt){let txt=key==='ALL'?'(전체 '+allRj.length+'건':'(전체 '+allRj.length+'건 / 이 달 '+filtRj.length+'건';if(filtRj.length>0)txt+=' · 남'+rjM+'/여'+rjF;txt+=')';rjCt.textContent=txt;}document.getElementById('rjB').innerHTML=filtRj.length?filtRj.map(r=>'<tr><td><strong>'+esc(r.name)+'</strong></td><td><span class="pill '+(r.gender==='남'?'pt':'pr')+'">'+esc(r.gender||'-')+'</span></td><td style="font-size:10px;">'+esc(r.rejectDate||'-')+'</td><td style="font-size:10px;color:var(--sb);">'+esc(r.reason||'-')+'</td>'+(_isAdmin?'<td><button class="btn bred" style="padding:2px 7px;font-size:10px;" onclick="safe(deleteReject,\''+esc(r.id)+'\')">🗑</button></td>':'')+'</tr>').join(''):'<tr><td colspan="'+(_isAdmin?5:4)+'" style="text-align:center;color:var(--mt);padding:8px;">'+(key==='ALL'?'없음':'이 기간 거절 없음')+'</td></tr>';const allKv=S.archived.filter(m=>m.status==='kicked'||m.status==='left');const filtKv=key==='ALL'?allKv:allKv.filter(m=>{const ex=m.exitDate||'';if(!ex)return false;try{const p=ex.split(/[\/\-]/);if(p.length>=3){const n=p[0]+'-'+p[1].padStart(2,'0')+'-'+p[2].padStart(2,'0');return dtKey(n)===key;}}catch(e){}return false;});document.getElementById('kvB').innerHTML=filtKv.length?filtKv.map(m=>'<tr><td><strong>'+esc(m.name)+'</strong></td><td><span class="pill '+(m.status==='kicked'?'pamb':'pgy')+'">'+(m.status==='kicked'?'강퇴':'탈퇴')+'</span></td><td style="font-size:10px;">'+esc(m.period||'-')+'</td><td style="font-size:10px;color:var(--sb);">'+esc(m.reason||m.note||'-')+'</td></tr>').join(''):'<tr><td colspan="4" style="text-align:center;color:var(--mt);padding:8px;">'+(key==='ALL'?'없음':'이 기간 강퇴·탈퇴 없음')+'</td></tr>';
+  const allRj=S.rejects||[];const filtRj=key==='ALL'?allRj:allRj.filter(r=>r.rejectDate&&dtKey(r.rejectDate)===key);const rjM=filtRj.filter(r=>r.gender==='남').length,rjF=filtRj.filter(r=>r.gender==='여').length;const rjCt=document.getElementById('rjCt');if(rjCt){let txt=key==='ALL'?'(전체 '+allRj.length+'건':'(전체 '+allRj.length+'건 / 이 달 '+filtRj.length+'건';if(filtRj.length>0)txt+=' · 남'+rjM+'/여'+rjF;txt+=')';rjCt.textContent=txt;}document.getElementById('rjB').innerHTML=filtRj.length?filtRj.map(r=>'<tr><td><strong>'+esc(r.name)+'</strong></td><td><span class="pill '+(r.gender==='남'?'pt':'pr')+'">'+esc(r.gender||'-')+'</span></td><td style="font-size:10px;">'+esc(r.rejectDate||'-')+'</td><td style="font-size:10px;color:var(--sb);">'+esc(r.reason||'-')+'</td>'+(_isAdmin?'<td><button class="btn bred" style="padding:2px 7px;font-size:10px;" onclick="safe(deleteReject,\''+esc(r.id)+'\')">🗑</button></td>':'')+'</tr>').join(''):'<tr><td colspan="'+(_isAdmin?5:4)+'" style="text-align:center;color:var(--mt);padding:8px;">'+(key==='ALL'?'없음':'이 기간 거절 없음')+'</td></tr>';const allKv=S.archived.filter(m=>m.status==='kicked'||m.status==='left');const filtKv=key==='ALL'?allKv:allKv.filter(m=>{const ex=m.exitDate||'';if(!ex)return false;const p=ex.split('/');if(p.length>=2){const n=p[0]+'-'+String(p[1]).padStart(2,'0');return n===key;}return false;});document.getElementById('kvB').innerHTML=filtKv.length?filtKv.map(m=>'<tr><td><strong>'+esc(m.name)+'</strong></td><td><span class="pill '+(m.status==='kicked'?'pamb':'pgy')+'">'+(m.status==='kicked'?'강퇴':'탈퇴')+'</span></td><td style="font-size:10px;">'+esc(m.period||'-')+'</td><td style="font-size:10px;color:var(--sb);">'+esc(m.reason||m.note||'-')+'</td>'+(_isAdmin?'<td style="white-space:nowrap;"><button class="btn bsub" style="padding:2px 6px;font-size:10px;" onclick="fixExitDate(\''+esc(m.id)+'\')" title="날짜/사유 수정">🛠</button> <button class="btn bred" style="padding:2px 6px;font-size:10px;" onclick="deleteArchived(\''+esc(m.id)+'\')" title="기록 삭제">🗑</button></td>':'')+'</tr>').join(''):'<tr><td colspan="'+(_isAdmin?5:4)+'" style="text-align:center;color:var(--mt);padding:8px;">'+(key==='ALL'?'없음':'이 기간 강퇴·탈퇴 없음')+'</td></tr>';
 }
 
 function renderDash(){safe(buildAllSels);safe(updateOpDays);if(!GF.all){const lk=latestK();if(lk&&!document.getElementById('dY').value){const[y,m]=lk.split('-');document.getElementById('dY').value=y;document.getElementById('dM').value=m;}}safe(syncDashAll);}
