@@ -32,23 +32,23 @@
     const db = getFirestore(initializeApp(fbCfg));
     
     // Deconstructed CRUD helper functions to prevent data overwriting and solve concurrency issue
-    window._fbSaveMember = async m => { await setDoc(doc(db, "members", m.id), m); };
-    window._fbDeleteMember = async id => { await deleteDoc(doc(db, "members", id)); };
+    window._fbSaveMember = async m => { try { await setDoc(doc(db, "members", m.id), m); } catch (e) { console.error("Firestore save member error:", e); } };
+    window._fbDeleteMember = async id => { try { await deleteDoc(doc(db, "members", id)); } catch (e) { console.error("Firestore delete member error:", e); } };
     
-    window._fbSaveArchived = async m => { await setDoc(doc(db, "archived", m.id), m); };
-    window._fbDeleteArchived = async id => { await deleteDoc(doc(db, "archived", id)); };
+    window._fbSaveArchived = async m => { try { await setDoc(doc(db, "archived", m.id), m); } catch (e) { console.error("Firestore save archived error:", e); } };
+    window._fbDeleteArchived = async id => { try { await deleteDoc(doc(db, "archived", id)); } catch (e) { console.error("Firestore delete archived error:", e); } };
     
-    window._fbSaveReject = async r => { await setDoc(doc(db, "rejects", r.id), r); };
-    window._fbDeleteReject = async id => { await deleteDoc(doc(db, "rejects", id)); };
+    window._fbSaveReject = async r => { try { await setDoc(doc(db, "rejects", r.id), r); } catch (e) { console.error("Firestore save reject error:", e); } };
+    window._fbDeleteReject = async id => { try { await deleteDoc(doc(db, "rejects", id)); } catch (e) { console.error("Firestore delete reject error:", e); } };
     
-    window._fbSaveBung = async b => { await setDoc(doc(db, "bungs", b.id), b); };
-    window._fbDeleteBung = async id => { await deleteDoc(doc(db, "bungs", id)); };
+    window._fbSaveBung = async b => { try { await setDoc(doc(db, "bungs", b.id), b); } catch (e) { console.error("Firestore save bung error:", e); } };
+    window._fbDeleteBung = async id => { try { await deleteDoc(doc(db, "bungs", id)); } catch (e) { console.error("Firestore delete bung error:", e); } };
     
-    window._fbSaveWarning = async w => { await setDoc(doc(db, "warnings", w.id), w); };
-    window._fbDeleteWarning = async id => { await deleteDoc(doc(db, "warnings", id)); };
+    window._fbSaveWarning = async w => { try { await setDoc(doc(db, "warnings", w.id), w); } catch (e) { console.error("Firestore save warning error:", e); } };
+    window._fbDeleteWarning = async id => { try { await deleteDoc(doc(db, "warnings", id)); } catch (e) { console.error("Firestore delete warning error:", e); } };
     
-    window._fbSaveSettlement = async (bungId, sheets) => { await setDoc(doc(db, "settlements", bungId), { sheets }); };
-    window._fbDeleteSettlement = async bungId => { await deleteDoc(doc(db, "settlements", bungId)); };
+    window._fbSaveSettlement = async (bungId, sheets) => { try { await setDoc(doc(db, "settlements", bungId), { sheets }); } catch (e) { console.error("Firestore save settlement error:", e); } };
+    window._fbDeleteSettlement = async bungId => { try { await deleteDoc(doc(db, "settlements", bungId)); } catch (e) { console.error("Firestore delete settlement error:", e); } };
     
     window._fbLoad = async () => { 
       try { 
@@ -301,10 +301,12 @@
     <div id="tab2" style="display:none;">
       <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;padding-top:12px;">
         <div class="card" style="align-self:start;">
-          <div class="sec">⚡ 번개 개설</div>
-          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;">
-            <input id="bt" placeholder="벙 제목"><input id="bdt" type="date">
-            <button class="btn bgr" style="width:100%;padding:8px;" onclick="safe(addBung)">⚡ 개설하기</button>
+          <div id="bCreateSection">
+            <div class="sec">⚡ 번개 개설</div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;">
+              <input id="bt" placeholder="벙 제목"><input id="bdt" type="date">
+              <button class="btn bgr" style="width:100%;padding:8px;" onclick="safe(addBung)">⚡ 개설하기</button>
+            </div>
           </div>
           <div class="sec" style="font-size:12px;">🔍 회원 참석 이력 검색</div>
           <div style="display:flex;gap:5px;margin-bottom:8px;">
@@ -394,7 +396,7 @@
           <div class="sec" style="color:var(--gold);">⚠️ 경고/노쇼 <span id="wCt" style="font-size:10px;color:var(--mt);"></span></div>
           <div style="overflow-y:auto;max-height:200px;">
             <table>
-              <thead><tr><th>이름</th><th>날짜</th><th>유형</th><th>사유</th><th id="wDelH">삭제</th></tr></thead>
+              <thead><tr><th>이름</th><th>날짜</th><th>유형</th><th>사유</th><th id="wDelH" style="display:none;">삭제</th></tr></thead>
               <tbody id="wB"></tbody>
             </table>
           </div>
@@ -541,7 +543,7 @@
         <!-- 정산 히스토리 사이드바 -->
         <div style="width:200px;flex-shrink:0;border-right:1px solid #ede9fe;padding:12px;overflow-y:auto;background:#faf5ff;">
           <div style="font-size:11px;font-weight:700;color:#5b21b6;margin-bottom:8px;">📂 저장된 정산</div>
-          <button class="stl-btn stl-btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="stlNewSheet()">＋ 새 정산</button>
+          <button id="stlNewBtn" class="stl-btn stl-btn-primary" style="width:100%;margin-bottom:8px;justify-content:center;" onclick="stlNewSheet()">＋ 새 정산</button>
           <div id="stl_histList"></div>
         </div>
         <!-- 정산 세부 설정 및 결과 바디 -->
@@ -556,7 +558,7 @@
             <div class="stl-row" style="margin-bottom:0;">
               <div style="flex:2;min-width:140px"><span class="stl-lbl">계좌 불러오기</span><select class="stl-input" id="stl_acctSel" onchange="stlLoadAcct()"></select></div>
               <div style="flex:3;min-width:160px"><span class="stl-lbl">벙주 계좌번호</span><input class="stl-input" id="stl_acctInput" placeholder="은행 계좌번호 이름" oninput="stlUpdateAcctDisp()"/></div>
-              <button class="stl-btn" onclick="stlSaveAcct()" style="margin-bottom:1px;">💾 저장</button>
+              <button id="stlSaveAcctBtn" class="stl-btn" onclick="stlSaveAcct()" style="margin-bottom:1px;">💾 저장</button>
             </div>
             <div id="stl_acctDisp" class="stl-acct">계좌번호 : —</div>
           </div>
@@ -564,7 +566,7 @@
           <div class="stl-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <div class="stl-sec" style="margin:0;">차수별 비용</div>
-              <button class="stl-btn" onclick="stlAddCost()">+ 차수 추가</button>
+              <button id="stlAddCostBtn" class="stl-btn" onclick="stlAddCost()">+ 차수 추가</button>
             </div>
             <div id="stl_costItems"></div>
           </div>
@@ -582,7 +584,7 @@
           <div class="stl-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <div class="stl-sec" style="margin:0;">참여자</div>
-              <button class="stl-btn" onclick="stlAddMember()">+ 참여자 추가</button>
+              <button id="stlAddMemBtn" class="stl-btn" onclick="stlAddMember()">+ 참여자 추가</button>
             </div>
             <div class="stl-opt-lbl" style="margin-bottom:6px;">💡 정산비용 칸을 직접 클릭해 수정하면, 차액이 나머지 인원에게 자동 재분배돼요.</div>
             <div style="overflow-x:auto;"><table class="stl-table" id="stl_mainTable"><thead id="stl_mainHead"></thead><tbody id="stl_mainBody"></tbody><tfoot id="stl_mainFoot"></tfoot></table></div>
@@ -596,7 +598,7 @@
           <div class="stl-card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <div class="stl-sec" style="margin:0;">정산 결과</div>
-              <button class="stl-btn stl-btn-save" onclick="stlSaveSheet()">💾 정산 저장</button>
+              <button id="stlSaveBtn" class="stl-btn stl-btn-save" onclick="stlSaveSheet()">💾 정산 저장</button>
             </div>
             <div id="stl_resultRows"></div>
             <div class="stl-divider"></div>
@@ -612,6 +614,6 @@
   </div>
 
   <!-- App logic entry script -->
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

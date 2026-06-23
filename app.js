@@ -2042,12 +2042,23 @@ function unlock(isAdmin) {
   }
   
   document.getElementById('lockScreen').style.display = 'none';
-  document.getElementById('t2btn').style.display = isAdmin ? '' : 'none';
+  document.getElementById('t2btn').style.display = '';
+  const bcs = document.getElementById('bCreateSection');
+  if (bcs) bcs.style.display = isAdmin ? 'block' : 'none';
+  
+  ['stlNewBtn', 'stlSaveAcctBtn', 'stlAddCostBtn', 'stlAddMemBtn', 'stlSaveBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isAdmin ? '' : 'none';
+  });
+
   document.getElementById('mLeft').style.display = isAdmin ? '' : 'none';
   document.getElementById('mGrid').style.gridTemplateColumns = isAdmin ? '310px 1fr' : '1fr';
   document.getElementById('mMgmtH').style.display = isAdmin ? '' : 'none';
   document.getElementById('btnImport').style.display = isAdmin ? '' : 'none';
   document.getElementById('rjDelH').style.display = isAdmin ? '' : 'none';
+  
+  const wdh = document.getElementById('wDelH');
+  if (wdh) wdh.style.display = isAdmin ? '' : 'none';
   
   const kvf = document.getElementById('kvFixH');
   if (kvf) kvf.style.display = isAdmin ? '' : 'none';
@@ -3173,15 +3184,36 @@ function renderBungs() {
       const p = resolve(aid);
       if (!p) return '';
       const cx = b.cancelled.includes(aid);
-      return '<span class="chip' + (cx ? ' chip-cx' : '') + '">' +
-        '<input type="checkbox" ' + (cx ? 'checked' : '') + ' onchange="safe(toggleCx,\'' + esc(b.id) + '\',\'' + esc(aid) + '\',this.checked)" style="width:11px;height:11px;cursor:pointer;flex-shrink:0;accent-color:var(--pri);">' +
-        '<span onclick="safe(renderHistBox,\'bHistBox\',\'' + esc(aid) + '\')" style="cursor:pointer;text-decoration:underline dotted;">' + esc(p.name) + '</span>' +
-        '<span onclick="safe(removeAtt,\'' + esc(b.id) + '\',\'' + esc(aid) + '\')" style="cursor:pointer;opacity:.55;font-size:10px;">✕</span></span>';
+      if (_isAdmin) {
+        return '<span class="chip' + (cx ? ' chip-cx' : '') + '">' +
+          '<input type="checkbox" ' + (cx ? 'checked' : '') + ' onchange="safe(toggleCx,\'' + esc(b.id) + '\',\'' + esc(aid) + '\',this.checked)" style="width:11px;height:11px;cursor:pointer;flex-shrink:0;accent-color:var(--pri);">' +
+          '<span onclick="safe(renderHistBox,\'bHistBox\',\'' + esc(aid) + '\')" style="cursor:pointer;text-decoration:underline dotted;">' + esc(p.name) + '</span>' +
+          '<span onclick="safe(removeAtt,\'' + esc(b.id) + '\',\'' + esc(aid) + '\')" style="cursor:pointer;opacity:.55;font-size:10px;">✕</span></span>';
+      } else {
+        return '<span class="chip' + (cx ? ' chip-cx' : '') + '">' +
+          (cx ? '<span style="font-size:9px;color:var(--rose);margin-right:2px;">🚷</span>' : '') +
+          '<span onclick="safe(renderHistBox,\'bHistBox\',\'' + esc(aid) + '\')" style="cursor:pointer;text-decoration:underline dotted;">' + esc(p.name) + '</span></span>';
+      }
     }).join('');
     
-    const addBtns = act.filter(m => !b.attendees.includes(m.id)).map(m => {
+    const addBtns = _isAdmin ? act.filter(m => !b.attendees.includes(m.id)).map(m => {
       return '<span onclick="safe(addAtt,\'' + esc(b.id) + '\',\'' + esc(m.id) + '\')" style="display:inline-block;background:#f0fdf4;border-radius:99px;padding:2px 8px;font-size:11px;cursor:pointer;margin:2px;color:var(--sb);border:1px solid var(--bd);" onmouseover="this.style.background=\'var(--pri-light)\';this.style.color=\'var(--pri)\'" onmouseout="this.style.background=\'#f0fdf4\';this.style.color=\'var(--sb)\'">' + esc(m.name) + '</span>';
-    }).join('');
+    }).join('') : '';
+    
+    const actionBtns = _isAdmin ? 
+      '<div style="display:flex;gap:5px;">' +
+        '<button class="btn" style="background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd;font-size:11px;padding:3px 9px;" onclick="safe(openSettlement,\'' + esc(b.id) + '\')">💰 정산</button>' +
+        '<button class="btn bsub" style="font-size:11px;padding:3px 8px;" onclick="safe(editBungTitle,\'' + esc(b.id) + '\')">✏️ 수정</button>' +
+        '<button class="btn bred" onclick="safe(delBung,\'' + esc(b.id) + '\')">🗑 삭제</button>' +
+      '</div>' : 
+      '<div style="display:flex;gap:5px;">' +
+        '<button class="btn" style="background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd;font-size:11px;padding:3px 9px;" onclick="safe(openSettlement,\'' + esc(b.id) + '\')">💰 조회</button>' +
+      '</div>';
+      
+    const addSection = _isAdmin ? 
+      '<div>' +
+        '<span style="font-size:10px;color:var(--mt);margin-right:4px;">추가</span>' + (addBtns || '<span style="color:var(--mt);font-size:11px;">모두 참석 중</span>') +
+      '</div>' : '';
     
     return '<div class="bc ' + (upc ? 'bcup' : '') + '">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:7px;flex-wrap:wrap;">' +
@@ -3193,18 +3225,12 @@ function renderBungs() {
           '<span class="pill pg">' + realAtt.length + '명 · 남' + gm + '/여' + gf + '</span>' +
           (b.cancelled.length ? '<span class="pill pr">' + b.cancelled.length + '명 취소</span>' : '') +
         '</div>' +
-        '<div style="display:flex;gap:5px;">' +
-          '<button class="btn" style="background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd;font-size:11px;padding:3px 9px;" onclick="safe(openSettlement,\'' + esc(b.id) + '\')">💰 정산</button>' +
-          '<button class="btn bsub" style="font-size:11px;padding:3px 8px;" onclick="safe(editBungTitle,\'' + esc(b.id) + '\')">✏️ 수정</button>' +
-          '<button class="btn bred" onclick="safe(delBung,\'' + esc(b.id) + '\')">🗑 삭제</button>' +
-        '</div>' +
+        actionBtns +
       '</div>' +
       '<div style="background:#fff;border-radius:8px;padding:5px 8px;min-height:26px;margin-bottom:6px;border:1px solid var(--bd);">' +
         '<span style="font-size:10px;color:var(--mt);margin-right:4px;">참석자</span>' + (chips || '<span style="color:var(--mt);font-size:11px;">없음</span>') +
       '</div>' +
-      '<div>' +
-        '<span style="font-size:10px;color:var(--mt);margin-right:4px;">추가</span>' + (addBtns || '<span style="color:var(--mt);font-size:11px;">모두 참석 중</span>') +
-      '</div>' +
+      addSection +
     '</div>';
   }).join('');
 }
@@ -3300,6 +3326,12 @@ function openSettlement(bId) {
   
   const hs = document.getElementById('stl_host');
   hs.innerHTML = activeM().map(m => '<option value="' + esc(m.name) + '">' + esc(m.name) + '</option>').join('');
+  hs.disabled = !_isAdmin;
+  const acctIn = document.getElementById('stl_acctInput');
+  if (acctIn) acctIn.disabled = !_isAdmin;
+  const acctSel = document.getElementById('stl_acctSel');
+  if (acctSel) acctSel.disabled = !_isAdmin;
+  
   stlRenderHistList();
   
   const list = (S.settlements && S.settlements[bId]) || [];
@@ -3601,11 +3633,13 @@ function stlUpdateAcctDisp() {
 }
 
 function stlTog(id) {
+  if (!_isAdmin) return;
   document.getElementById(id).classList.toggle('on');
   stlRenderAll();
 }
 
 function stlTogNoBj() {
+  if (!_isAdmin) return;
   const el = document.getElementById('stl_togNoBj');
   el.classList.toggle('on');
   if (el.classList.contains('on')) {
@@ -3640,7 +3674,7 @@ function stlRemoveCost(i) {
     no[mi] = {};
     Object.keys(stl.opts[mi]).forEach(ci => {
       const nci = +ci < i ? +ci : (+ci > i ? +ci - 1 : -1);
-      if (nci >= 0) no[mi][nci] = S.opts[mi][ci];
+      if (nci >= 0) no[mi][nci] = stl.opts[mi][ci];
     });
   });
   stl.opts = no;
@@ -3654,12 +3688,12 @@ function stlRenderCosts() {
   stl.costs.forEach((c, i) => {
     const div = document.createElement('div');
     div.style.cssText = 'display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap;border-bottom:0.5px solid #f1f5f9;padding-bottom:9px;margin-bottom:9px;';
-    div.innerHTML = '<div style="flex:0 0 50px"><span class="stl-lbl">차수</span><input class="stl-input" value="' + esc(c.label) + '" oninput="stl.costs[' + i + '].label=this.value;stlRenderAll()" style="text-align:center"/></div>' +
-      '<div style="flex:2;min-width:80px"><span class="stl-lbl">장소명</span><input class="stl-input" value="' + esc(c.place) + '" placeholder="장소" oninput="stl.costs[' + i + '].place=this.value;stlRenderAll()"/></div>' +
-      '<div style="flex:1;min-width:72px"><span class="stl-lbl">총액</span><input class="stl-input" type="number" value="' + (c.total || '') + '" placeholder="0" oninput="stl.costs[' + i + '].total=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>' +
-      '<div style="flex:1;min-width:72px"><span class="stl-lbl">주류금액</span><input class="stl-input" type="number" value="' + (c.liquor || '') + '" placeholder="0" oninput="stl.costs[' + i + '].liquor=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>' +
-      '<div style="flex:1;min-width:72px"><span class="stl-lbl">음료금액</span><input class="stl-input" type="number" value="' + (c.drink || '') + '" placeholder="0" oninput="stl.costs[' + i + '].drink=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>' +
-      '<button class="stl-btn stl-btn-danger" onclick="stlRemoveCost(' + i + ')" style="margin-bottom:1px;">🗑</button>';
+    div.innerHTML = '<div style="flex:0 0 50px"><span class="stl-lbl">차수</span><input class="stl-input" value="' + esc(c.label) + '" ' + (_isAdmin ? '' : 'disabled') + ' oninput="stl.costs[' + i + '].label=this.value;stlRenderAll()" style="text-align:center"/></div>' +
+      '<div style="flex:2;min-width:80px"><span class="stl-lbl">장소명</span><input class="stl-input" value="' + esc(c.place) + '" placeholder="장소" ' + (_isAdmin ? '' : 'disabled') + ' oninput="stl.costs[' + i + '].place=this.value;stlRenderAll()"/></div>' +
+      '<div style="flex:1;min-width:72px"><span class="stl-lbl">총액</span><input class="stl-input" type="number" value="' + (c.total || '') + '" placeholder="0" ' + (_isAdmin ? '' : 'disabled') + ' oninput="stl.costs[' + i + '].total=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>' +
+      '<div style="flex:1;min-width:72px"><span class="stl-lbl">주류금액</span><input class="stl-input" type="number" value="' + (c.liquor || '') + '" placeholder="0" ' + (_isAdmin ? '' : 'disabled') + ' oninput="stl.costs[' + i + '].liquor=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>' +
+      '<div style="flex:1;min-width:72px"><span class="stl-lbl">음료금액</span><input class="stl-input" type="number" value="' + (c.drink || '') + '" placeholder="0" ' + (_isAdmin ? '' : 'disabled') + ' oninput="stl.costs[' + i + '].drink=+this.value||0;stl.manualTotal={};stlRenderAll()" style="text-align:right"/></div>' +
+      (_isAdmin ? '<button class="stl-btn stl-btn-danger" onclick="stlRemoveCost(' + i + ')" style="margin-bottom:1px;">🗑</button>' : '');
     d.appendChild(div);
   });
 }
@@ -3835,7 +3869,7 @@ function stlRenderMainTable() {
   const htr = document.createElement('tr');
   htr.innerHTML = '<th>번호</th><th>이름</th>';
   stl.costs.forEach(c => htr.innerHTML += '<th>' + esc(c.label) + (c.place ? ' ' + esc(c.place) : '') + '</th>');
-  htr.innerHTML += '<th>모임비</th><th>벙주비</th><th class="stl-prepay-col">선입금</th><th style="color:#5b21b6;">정산비용</th><th>비고</th><th></th>';
+  htr.innerHTML += '<th>모임비</th><th>벙주비</th><th class="stl-prepay-col">선입금</th><th style="color:#5b21b6;">정산비용</th><th>비고</th>' + (_isAdmin ? '<th></th>' : '');
   head.appendChild(htr);
   
   const allShares = stl.costs.map((c, ci) => stlCalcShares(ci));
@@ -3857,7 +3891,7 @@ function stlRenderMainTable() {
     const nameOpts = allNames.map(n => '<option value="' + esc(n) + '"' + (m.name === n ? ' selected' : '') + '>' + esc(n) + '</option>').join('');
     
     let cells = '<td style="color:#94a3b8;">' + (mi + 1) + '</td>';
-    cells += '<td class="sn"><select style="font-size:11px;padding:2px 4px;min-width:65px;border:1px solid #e2e8f0;border-radius:5px;" onchange="stl.members[' + mi + '].name=this.value;stlRenderAll()">' + nameOpts + '</select>' + (isHost ? '<span class="stl-badge-host">벙주</span>' : '') + '</td>';
+    cells += '<td class="sn"><select style="font-size:11px;padding:2px 4px;min-width:65px;border:1px solid #e2e8f0;border-radius:5px;" ' + (_isAdmin ? '' : 'disabled') + ' onchange="stl.members[' + mi + '].name=this.value;stlRenderAll()">' + nameOpts + '</select>' + (isHost ? '<span class="stl-badge-host">벙주</span>' : '') + '</td>';
     
     stl.costs.forEach((c, ci) => {
       const s = allShares[ci][mi];
@@ -3865,10 +3899,12 @@ function stlRenderMainTable() {
     });
     cells += '<td style="color:#94a3b8;">' + (moim > 0 ? moim.toLocaleString() : '-') + '</td>';
     cells += '<td style="color:#94a3b8;">' + (bj > 0 ? bj.toLocaleString() : '-') + '</td>';
-    cells += '<td class="stl-prepay-col"><input type="text" inputmode="numeric" value="' + ((m.prepay || 0) > 0 ? (m.prepay).toLocaleString() : '') + '" placeholder="0" style="width:70px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;text-align:right;" onfocus="this.value=this.value.replace(/,/g,\'\')" onblur="stl.members[' + mi + '].prepay=+this.value.replace(/[^0-9]/g,\'\')||0;stl.manualTotal={};stlRenderAll()" onkeydown="if(event.key===\'Enter\')this.blur()"/></td>';
-    cells += '<td><input type="text" inputmode="numeric" class="stl-amt" value="' + total.toLocaleString() + '" style="width:75px;font-weight:700;color:#5b21b6;border:1px solid #ddd6fe;border-radius:5px;padding:3px 5px;text-align:right;background:#faf5ff;" onfocus="this.value=this.value.replace(/,/g,\'\')" onblur="stlEditTotal(' + mi + ',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"/></td>';
-    cells += '<td><input value="' + esc(m.note) + '" placeholder="비고" style="min-width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" oninput="stl.members[' + mi + '].note=this.value"/></td>';
-    cells += '<td><button class="stl-btn stl-btn-danger" onclick="stl.members.splice(' + mi + ',1);delete stl.opts[' + mi + '];stl.manualTotal={};stlRenderAll()">✕</button></td>';
+    cells += '<td class="stl-prepay-col"><input type="text" inputmode="numeric" value="' + ((m.prepay || 0) > 0 ? (m.prepay).toLocaleString() : '') + '" placeholder="0" ' + (_isAdmin ? '' : 'disabled') + ' style="width:70px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;text-align:right;" onfocus="this.value=this.value.replace(/,/g,\'\')" onblur="stl.members[' + mi + '].prepay=+this.value.replace(/[^0-9]/g,\'\')||0;stl.manualTotal={};stlRenderAll()" onkeydown="if(event.key===\'Enter\')this.blur()"/></td>';
+    cells += '<td><input type="text" inputmode="numeric" class="stl-amt" value="' + total.toLocaleString() + '" ' + (_isAdmin ? '' : 'disabled') + ' style="width:75px;font-weight:700;color:#5b21b6;border:1px solid #ddd6fe;border-radius:5px;padding:3px 5px;text-align:right;background:#faf5ff;" onfocus="this.value=this.value.replace(/,/g,\'\')" onblur="stlEditTotal(' + mi + ',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()"/></td>';
+    cells += '<td><input value="' + esc(m.note) + '" placeholder="비고" ' + (_isAdmin ? '' : 'disabled') + ' style="min-width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" oninput="stl.members[' + mi + '].note=this.value"/></td>';
+    if (_isAdmin) {
+      cells += '<td><button class="stl-btn stl-btn-danger" onclick="stl.members.splice(' + mi + ',1);delete stl.opts[' + mi + '];stl.manualTotal={};stlRenderAll()">✕</button></td>';
+    }
     
     tr.innerHTML = cells;
     body.appendChild(tr);
@@ -3880,7 +3916,7 @@ function stlRenderMainTable() {
   ftr.innerHTML += '<td>' + (totalMoim > 0 ? totalMoim.toLocaleString() : '-') + '</td>';
   ftr.innerHTML += '<td>' + (totalBj > 0 ? totalBj.toLocaleString() : '-') + '</td>';
   ftr.innerHTML += '<td class="stl-prepay-col">' + (totalPrepay > 0 ? '-' + totalPrepay.toLocaleString() : '-') + '</td>';
-  ftr.innerHTML += '<td class="stl-amt">' + grandTotal.toLocaleString() + '</td><td></td><td></td>';
+  ftr.innerHTML += '<td class="stl-amt">' + grandTotal.toLocaleString() + '</td><td></td>' + (_isAdmin ? '<td></td>' : '');
   foot.appendChild(ftr);
 }
 
@@ -3911,9 +3947,9 @@ function stlRenderOptTable() {
     const tr = document.createElement('tr');
     let cells = '<td class="sn">' + esc(m.name) + '</td>';
     stl.costs.forEach((c, ci) => {
-      cells += '<td><input type="checkbox" ' + (stlGetOpt(mi, ci, 'nalcohol') ? 'checked' : '') + ' onchange="stlSetOpt(' + mi + ',' + ci + ',\'nalcohol\',this.checked)"/></td>';
-      cells += '<td><input type="number" value="' + (stlGetLate(mi, ci) || '') + '" placeholder="0" style="width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" onchange="stlSetLate(' + mi + ',' + ci + ',this.value)"/></td>';
-      cells += '<td><input type="checkbox" ' + (stlGetOpt(mi, ci, 'exempt') ? 'checked' : '') + ' onchange="stlSetOpt(' + mi + ',' + ci + ',\'exempt\',this.checked)"/></td>';
+      cells += '<td><input type="checkbox" ' + (stlGetOpt(mi, ci, 'nalcohol') ? 'checked' : '') + ' ' + (_isAdmin ? '' : 'disabled') + ' onchange="stlSetOpt(' + mi + ',' + ci + ',\'nalcohol\',this.checked)"/></td>';
+      cells += '<td><input type="number" value="' + (stlGetLate(mi, ci) || '') + '" placeholder="0" ' + (_isAdmin ? '' : 'disabled') + ' style="width:65px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;" onchange="stlSetLate(' + mi + ',' + ci + ',this.value)"/></td>';
+      cells += '<td><input type="checkbox" ' + (stlGetOpt(mi, ci, 'exempt') ? 'checked' : '') + ' ' + (_isAdmin ? '' : 'disabled') + ' onchange="stlSetOpt(' + mi + ',' + ci + ',\'exempt\',this.checked)"/></td>';
     });
     tr.innerHTML = cells;
     body.appendChild(tr);
@@ -4259,9 +4295,9 @@ function renderArchived(k) {
   
   document.getElementById('wCt').textContent = '(' + merged.length + '건)';
   document.getElementById('wB').innerHTML = merged.length ? merged.map(w => {
-    const delBtn = w.id ? '<td><button class="btn bred" style="padding:2px 7px;font-size:10px;" onclick="safe(deleteWarning,\'' + esc(w.id) + '\')">🗑</button></td>' : '<td></td>';
+    const delBtn = _isAdmin ? (w.id ? '<td><button class="btn bred" style="padding:2px 7px;font-size:10px;" onclick="safe(deleteWarning,\'' + esc(w.id) + '\')">🗑</button></td>' : '<td></td>') : '';
     return '<tr><td><strong>' + esc(w.name) + '</strong></td><td style="font-size:10px;">' + esc(w.date) + '</td><td><span class="pill ' + (w.type === '경고' ? 'pamb' : 'pr') + '">' + esc(w.type) + '</span></td><td style="font-size:10px;color:var(--sb);">' + esc(w.reason) + '</td>' + delBtn + '</tr>';
-  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--mt);padding:8px;">기록 없음</td></tr>';
+  }).join('') : '<tr><td colspan="' + (_isAdmin ? 5 : 4) + '" style="text-align:center;color:var(--mt);padding:8px;">기록 없음</td></tr>';
   
   const allRj = S.rejects || [];
   const filtRj = key === 'ALL' ? allRj : allRj.filter(r => r.rejectDate && dtKey(r.rejectDate) === key);
