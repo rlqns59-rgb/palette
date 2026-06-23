@@ -2192,7 +2192,9 @@ async function loadData() {
     tries++;
   }
   try {
-    const ok = window._fbLoad && await window._fbLoad();
+    const loadPromise = window._fbLoad ? window._fbLoad() : Promise.resolve(false);
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), 1500));
+    const ok = await Promise.race([loadPromise, timeoutPromise]);
     if (ok && window._remote && window._remote.members && window._remote.members.length > 0) {
       applyData(window._remote);
       if (si) {
