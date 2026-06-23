@@ -856,16 +856,31 @@ function stlRenderHistList(){
     return '<div class="sv'+(isAct?' active':'')+'" onclick="stlLoadSheet(\''+sid+'\')"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;color:#5b21b6;">'+esc(label)+'</div><div style="font-size:10px;color:#7c3aed;margin-top:2px;">벙주: '+esc(s.host||'-')+'</div><div style="font-size:10px;color:#059669;margin-top:1px;">총 '+total.toLocaleString()+'원</div></div><button onclick="event.stopPropagation();stlDeleteSheet(\''+sid+'\')" style="background:none;border:none;font-size:14px;cursor:pointer;color:#fca5a5;padding:0;">🗑</button></div></div>';
   }).join('');
 }
+function stlCalcAllTotalsFromSheet(sheet){
+  const n=sheet.members.length;
+  const floatTotals=sheet.members.map((m,mi)=>{
+    if(sheet.manualTotal&&sheet.manualTotal[mi]!=null)return sheet.manualTotal[mi];
+    const isHost=m.name===sheet.host;
+    let t=0;
+    (sheet.costs||[]).forEach((c,ci)=>{const sh=stlCalcSharesFrom(sheet,ci);t+=sh[mi]||0;});
+    if(!isHost&&sheet.moimOn!==false)t+=1000;
+    if(!isHost&&sheet.bjOn!==false)t+=1000;
+    t-=m.prepay||0;
+    return t;
+  });
+  const floored=floatTotals.map(t=>Math.floor(t));
+  const totalFloat=floatTotals.reduce((a,b)=>a+b,0);
+  const totalFloored=floored.reduce((a,b)=>a+b,0);
+  const remainder=Math.round(totalFloat)-totalFloored;
+  if(remainder!==0){
+    const hostIdx=sheet.members.findIndex(m=>m.name===sheet.host);
+    const targetIdx=hostIdx>=0?hostIdx:0;
+    floored[targetIdx]+=remainder;
+  }
+  return floored;
+}
 function stlCalcTotalFromSheet(sheet,mi){
-  if(sheet.manualTotal&&sheet.manualTotal[mi]!=null)return sheet.manualTotal[mi];
-  const m=sheet.members[mi];if(!m)return 0;
-  const isHost=m.name===sheet.host;
-  let t=0;
-  (sheet.costs||[]).forEach((c,ci)=>{const sh=stlCalcSharesFrom(sheet,ci);t+=sh[mi]||0;});
-  if(!isHost&&sheet.moimOn!==false)t+=1000;
-  if(!isHost&&sheet.bjOn!==false)t+=1000;
-  t-=m.prepay||0;
-  return t;
+  return stlCalcAllTotalsFromSheet(sheet)[mi];
 }
 function stlCalcSharesFrom(sheet,ci){
   const c=sheet.costs[ci];if(!c)return [];
@@ -880,23 +895,8 @@ function stlCalcSharesFrom(sheet,ci){
   const tLate=lateAmts.reduce((a,b)=>a+b,0);
   const redist=sheet.members.map((x,mi)=>active[mi]&&lateAmts[mi]===0);
   const rC=redist.filter(Boolean).length;
-  const fin=sheet.members.map((x,mi)=>{if(!active[mi])return 0;let s=base[mi]-lateAmts[mi];if(redist[mi]&&rC>0)s+=tLate/rC;return Math.max(0,Math.round(s));});
-  const sum=fin.reduce((a,b)=>a+b,0);
-  let diff=c.total-sum;
-  if(diff!==0){
-    const activeIdxs=[];
-    for(let i=0;i<n;i++){if(active[i])activeIdxs.push(i);}
-    const step=diff>0?1:-1;
-    let remaining=Math.abs(diff);
-    let p=0;
-    while(remaining>0&&activeIdxs.length>0){
-      const idx=activeIdxs[p%activeIdxs.length];
-      fin[idx]+=step;
-      remaining--;
-      p++;
-    }
-  }
-  return fin;
+  // 소수점 그대로 반환 — 절사는 stlCalcTotalFromSheet에서 최종 합산 후 처리
+  return sheet.members.map((x,mi)=>{if(!active[mi])return 0;let s=base[mi]-lateAmts[mi];if(redist[mi]&&rC>0)s+=tLate/rC;return Math.max(0,s);});
 }
 function stlRefreshAcctDropdown(){const sel=document.getElementById('stl_acctSel');sel.innerHTML='<option value="">직접 입력</option>'+stl.savedAccts.map(a=>'<option value="'+esc(a)+'">'+esc(a)+'</option>').join('');}
 function stlLoadAcct(){const v=document.getElementById('stl_acctSel').value;if(v){document.getElementById('stl_acctInput').value=v;stlUpdateAcctDisp();}}
@@ -947,43 +947,49 @@ function stlCalcShares(ci){
   const totalLate=lateAmts.reduce((a,b)=>a+b,0);
   const redistribute=stl.members.map((x,mi)=>active[mi]&&lateAmts[mi]===0);
   const redistCount=redistribute.filter(Boolean).length;
-  const finalShare=stl.members.map((x,mi)=>{
+  // 소수점 그대로 반환 — 절사는 stlCalcAutoTotal에서 최종 합산 후 1회만 처리
+  return stl.members.map((x,mi)=>{
     if(!active[mi])return 0;
     let s=baseShare[mi]-lateAmts[mi];
     if(redistribute[mi]&&redistCount>0)s+=totalLate/redistCount;
-    return Math.max(0,Math.round(s));
+    return Math.max(0,s);
   });
-  // 반올림 오차를 활성 인원 전체에 1원씩 순차 분배 (한 사람에게 몰리지 않도록)
-  const sum=finalShare.reduce((a,b)=>a+b,0);
-  let diff=c.total-sum;
-  if(diff!==0){
-    const activeIdxs=[];
-    for(let i=0;i<n;i++){if(active[i])activeIdxs.push(i);}
-    const step=diff>0?1:-1;
-    let remaining=Math.abs(diff);
-    let p=0;
-    while(remaining>0&&activeIdxs.length>0){
-      const idx=activeIdxs[p%activeIdxs.length];
-      finalShare[idx]+=step;
-      remaining--;
-      p++;
-    }
-  }
-  return finalShare;
 }
 
-// 자동 계산 정산비용 (수동 수정 반영 전)
-function stlCalcAutoTotal(mi){
+// 차수별 소수점 합산 후 1회 절사 — 잔돈은 벙주 총액에서 흡수
+// 반환: 인원별 정수 배열 [총식비합계(절사), ...]
+function stlCalcAllTotalsRaw(){
   const host=document.getElementById('stl_host').value;
-  const isHost=stl.members[mi].name===host;
   const moimOn=document.getElementById('stl_togMoim').classList.contains('on');
   const bjOn=document.getElementById('stl_togBj').classList.contains('on');
-  let t=0;
-  stl.costs.forEach((c,ci)=>{const s=stlCalcShares(ci);t+=s[mi];});
-  if(!isHost&&moimOn)t+=1000;
-  if(!isHost&&bjOn)t+=1000;
-  t-=stl.members[mi].prepay||0;
-  return t;
+  const n=stl.members.length;
+  // 1) 차수별 소수점 합산
+  const floatTotals=stl.members.map((m,mi)=>{
+    let t=0;
+    stl.costs.forEach((c,ci)=>{const s=stlCalcShares(ci);t+=s[mi]||0;});
+    const isHost=m.name===host;
+    if(!isHost&&moimOn)t+=1000;
+    if(!isHost&&bjOn)t+=1000;
+    t-=m.prepay||0;
+    return t;
+  });
+  // 2) 전원 절사
+  const floored=floatTotals.map(t=>Math.floor(t));
+  // 3) 절사 잔돈 합계 계산
+  const totalFloat=floatTotals.reduce((a,b)=>a+b,0);
+  const totalFloored=floored.reduce((a,b)=>a+b,0);
+  const remainder=Math.round(totalFloat)-totalFloored; // 총 잔돈(정수)
+  // 4) 잔돈은 벙주가 흡수
+  if(remainder!==0){
+    const hostIdx=stl.members.findIndex(m=>m.name===host);
+    const targetIdx=hostIdx>=0?hostIdx:0;
+    floored[targetIdx]+=remainder;
+  }
+  return floored;
+}
+// 자동 계산 정산비용 (수동 수정 반영 전)
+function stlCalcAutoTotal(mi){
+  return stlCalcAllTotalsRaw()[mi];
 }
 // 최종 정산비용 (수동 오버라이드 있으면 그 값 사용)
 function stlCalcTotal(mi){
@@ -1046,7 +1052,7 @@ function stlRenderMainTable(){
     const nameOpts=allNames.map(n=>'<option value="'+esc(n)+'"'+(m.name===n?' selected':'')+'>'+esc(n)+'</option>').join('');
     let cells='<td style="color:#94a3b8;">'+(mi+1)+'</td>';
     cells+='<td class="sn"><select style="font-size:11px;padding:2px 4px;min-width:65px;border:1px solid #e2e8f0;border-radius:5px;" onchange="stl.members['+mi+'].name=this.value;stlRenderAll()">'+nameOpts+'</select>'+(isHost?'<span class="stl-badge-host">벙주</span>':'')+'</td>';
-    stl.costs.forEach((c,ci)=>{const s=allShares[ci][mi];cells+='<td>'+(s>0?s.toLocaleString():'-')+'</td>';});
+    stl.costs.forEach((c,ci)=>{const s=allShares[ci][mi];const sd=Math.floor(s);cells+='<td>'+(sd>0?sd.toLocaleString():'-')+'</td>';});
     cells+='<td style="color:#94a3b8;">'+(moim>0?moim.toLocaleString():'-')+'</td>';
     cells+='<td style="color:#94a3b8;">'+(bj>0?bj.toLocaleString():'-')+'</td>';
     cells+='<td><input type="text" inputmode="numeric" value="'+((m.prepay||0)>0?(m.prepay).toLocaleString():'')+'" placeholder="0" style="width:70px;font-size:11px;border:1px solid #e2e8f0;border-radius:5px;padding:3px 5px;text-align:right;" onfocus="this.value=this.value.replace(/,/g,\'\')" onblur="stl.members['+mi+'].prepay=+this.value.replace(/[^0-9]/g,\'\')||0;stl.manualTotal={};stlRenderAll()" onkeydown="if(event.key===\'Enter\')this.blur()"/></td>';
