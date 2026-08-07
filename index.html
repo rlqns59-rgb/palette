@@ -20,6 +20,7 @@ const fbCfg = {
 };
 const db = getFirestore(initializeApp(fbCfg));
 const REF = doc(db,"palette","main");
+const FEEDREF = doc(db,"palette","eventFeed");   /* Cloudflare Worker 가 주 1회 쓰는 문서 */
 const BKCOL = collection(db,"palette_backups");
 window._localVer = 0;
 /* 버전 충돌 가드: 저장 시점에 서버 버전이 내가 마지막으로 읽은 버전보다 높으면(=다른 기기가 먼저 저장) 저장을 거부한다 */
@@ -82,6 +83,16 @@ window._fbBackupGet = async id => {
 window._fbBackupDelete = async id => {
   try { await deleteDoc(doc(db,"palette_backups",id)); return true; } catch(e) { console.error(e); return false; }
 };
+
+/* 이벤트 피드는 main 페이로드와 분리된 문서라, 앱 저장과 충돌하지 않는다 */
+onSnapshot(FEEDREF, snap => {
+  try{
+    const raw = snap.exists() ? snap.data().payload : null;
+    window._eventFeed = raw ? JSON.parse(raw) : null;
+    if(window._S) window._S.eventFeed = window._eventFeed;
+    window._renderFeed && window._renderFeed();
+  }catch(e){ console.warn('[eventFeed 파싱 실패]', e); }
+});
 
 onSnapshot(REF, snap => {
   if(!snap.exists()) return;
@@ -153,6 +164,37 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:#f6fdf9;}
 .top{background:#fff;padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:1.5px solid var(--bd);box-shadow:0 2px 12px rgba(5,150,105,.07);}
 .sec{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:9px;display:flex;align-items:center;gap:6px;}.sec::after{content:'';flex:1;height:1px;background:var(--bd);}
 .hist-box{background:var(--sur);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-top:10px;box-shadow:var(--ss);}
+/* ══ v23 추가 스타일 ══ */
+.addbox{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;border:1.5px dashed var(--pri);background:#f0fdf4;color:var(--pri);transition:all .16s;}
+.addbox:hover{background:var(--pl);}
+.addbox.on{background:var(--pri);color:#fff;border-style:solid;}
+.plc{background:var(--sur);border:1px solid var(--bd);border-radius:12px;padding:11px 12px;box-shadow:var(--ss);display:flex;flex-direction:column;gap:5px;position:relative;transition:all .16s;}
+.plc:hover{box-shadow:var(--sh);transform:translateY(-1px);}
+.plc.blk{opacity:.55;border-style:dashed;}
+.plcb{position:absolute;top:9px;right:9px;font-size:13px;text-decoration:none;opacity:.6;}
+.plcb:hover{opacity:1;}
+.cchip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:var(--rp);font-size:10px;font-weight:600;cursor:pointer;border:1.5px solid var(--b2);background:#fff;color:var(--sb);margin:1px;}
+.cchip.on{background:var(--pri);color:#fff;border-color:var(--pri);}
+.slotbar{position:sticky;bottom:0;background:var(--sur);border:1.5px solid var(--pri);border-radius:var(--r);padding:9px 14px;box-shadow:0 -4px 16px rgba(5,150,105,.13);display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;z-index:20;}
+.slot{background:var(--s2);border:1.5px dashed var(--b2);border-radius:var(--rs);padding:4px 10px;font-size:11px;color:var(--mt);min-width:120px;}
+.slot.fill{border-style:solid;border-color:var(--pri);background:var(--pl);color:var(--pri);font-weight:700;}
+.calt{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed;}
+.calt th{background:transparent;text-align:center;font-size:10px;color:var(--sb);padding:3px;border:none;}
+.calt td{vertical-align:top;height:78px;background:var(--s2);border-radius:8px;padding:4px 5px;border:1px solid transparent;font-size:10px;}
+.calt td.oth{background:transparent;}
+.calt td.dup{border-color:#fca5a5;background:#fff1f2;}
+.calt td.warn{border-color:#fcd34d;background:#fffbeb;}
+.calt td.tdy{border-color:var(--pri);box-shadow:0 0 0 2px rgba(5,150,105,.15);}
+.caln{font-weight:700;font-size:11px;color:var(--sb);}
+.calb{display:block;background:var(--pl);color:var(--pri);border-radius:5px;padding:1px 4px;margin-top:2px;font-size:9px;font-weight:600;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.calb:hover{background:var(--pri);color:#fff;}
+.calb.up{background:var(--gl);color:var(--gold);}
+.stfrow{display:grid;grid-template-columns:1fr 90px 120px 90px 30px;gap:6px;align-items:center;margin-bottom:5px;}
+.stfrow.hd{font-size:10px;font-weight:700;color:var(--sb);}
+.xbtn{background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;padding:2px;}
+.mchip{display:inline-flex;align-items:center;gap:3px;background:var(--pl);color:var(--pri);padding:2px 7px;border-radius:var(--rp);font-size:10px;margin:1px;cursor:pointer;}
+.kbox{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.9;}
+.soon{background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 8px,#f1f5f9 8px,#f1f5f9 16px);border:1.5px dashed var(--b2);border-radius:10px;padding:16px;text-align:center;color:var(--mt);font-size:11px;line-height:1.8;}
 .stl-card{background:#fff;border:0.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px;}
 .stl-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;}
 .stl-lbl{font-size:11px;color:#64748b;margin-bottom:2px;display:block;}
@@ -201,7 +243,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
 <div class="top">
   <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-    <span style="font-weight:800;font-size:15px;color:var(--pri);">🌿 팔레트 운영 대시보드 <span style="font-size:10px;color:var(--mt);">v16</span></span>
+    <span style="font-weight:800;font-size:15px;color:var(--pri);">🌿 팔레트 운영 대시보드 <span style="font-size:10px;color:var(--mt);">v25</span></span>
     <span id="opTop" style="font-size:11px;color:var(--pri);font-weight:700;background:var(--pl);padding:3px 10px;border-radius:99px;"></span>
     <span id="si" style="font-size:10px;color:var(--mt);"></span>
     <div style="display:flex;align-items:center;gap:5px;">
@@ -223,6 +265,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
   <button id="t2btn" class="tb ti" onclick="switchTab(2)">⚡ 번개 관리</button>
   <button id="t3btn" class="tb ti" onclick="switchTab(3)">📊 대시보드</button>
   <button id="t4btn" class="tb ti" onclick="switchTab(4)">🚫 제외 관리</button>
+  <button id="t5btn" class="tb ti" onclick="switchTab(5)">🗺️ 장소맵</button>
+  <button id="t6btn" class="tb ti" onclick="switchTab(6)">🧑‍💼 운영진</button>
 </div>
 
 <div style="max-width:1440px;margin:0 auto;padding:0 16px 32px;">
@@ -311,33 +355,83 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 </div>
 
 <!-- TAB 2 -->
-<div id="tab2" style="display:none;">
-  <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;padding-top:12px;">
-    <div class="card" style="align-self:start;">
-      <div class="sec">⚡ 번개 개설</div>
-      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px;">
-        <input id="bt" placeholder="벙 제목"><input id="bdt" type="date">
-        <button class="btn bgr" style="width:100%;padding:8px;" onclick="safe(addBung)">⚡ 개설하기</button>
-      </div>
-      <div class="sec" style="font-size:12px;">🔍 회원 참석 이력 검색</div>
-      <div style="display:flex;gap:5px;margin-bottom:8px;">
-        <input id="bSrch" placeholder="회원 이름 입력" onkeydown="if(event.key==='Enter')safe(runBSearch)">
-        <button class="btn bg" style="flex-shrink:0;padding:5px 10px;" onclick="safe(runBSearch)">검색</button>
-      </div>
-      <div id="bHistBox" style="display:none;" class="hist-box"></div>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);">
-        <div class="sec" style="font-size:12px;">🗂 조회 필터</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;">
-          <select id="bMF" onchange="safe(renderBungs)" style="font-size:11px;padding:3px 8px;width:auto;"></select>
-          <button id="fUp" class="ftg ftoff" onclick="toggleMF('upcoming')">📅 예정만</button>
-        </div>
-      </div>
-      <div style="margin-top:10px;font-size:11px;color:var(--mt);line-height:1.8;">💡 체크박스=당일취소<br>이름클릭→이력 · ✕→제외<br>💰 정산버튼→정산시트</div>
+<div id="tab2" style="display:none;padding-top:12px;">
+
+  <!-- ── 상단 바: [＋ 번개 입력] + 조회 필터 ── -->
+  <div class="fbox" style="margin-bottom:10px;">
+    <button id="bAddToggle" class="addbox" onclick="toggleBungCreate()">＋ 번개 입력</button>
+    <span style="width:1px;height:22px;background:var(--bd);"></span>
+    <span style="font-size:11px;font-weight:700;color:var(--sb);">🗂 조회 필터</span>
+    <select id="bMF" onchange="safe(onBungFilter)" style="width:auto;font-size:11px;padding:4px 9px;font-weight:600;"></select>
+    <button id="fUp" class="ftg ftoff" onclick="toggleMF('upcoming')">📅 예정만</button>
+    <input id="bListSrch" placeholder="🔍 벙 제목" style="width:110px;font-size:11px;padding:4px 8px;" oninput="safe(renderBungs)">
+    <span style="width:1px;height:22px;background:var(--bd);"></span>
+    <span style="font-size:11px;font-weight:700;color:var(--sb);">👁 보기</span>
+    <button id="vwList" class="ftg fton" onclick="setBungView('list')">📋 리스트</button>
+    <button id="vwCal" class="ftg ftoff" onclick="setBungView('cal')">📅 캘린더</button>
+    <span id="bCnt" style="margin-left:auto;font-size:11px;color:var(--pri);font-weight:700;"></span>
+  </div>
+
+  <!-- ── 접이식 번개 개설 패널 (기본 숨김) ── -->
+  <div id="bungCreateBox" class="card" style="display:none;margin-bottom:12px;border:1.5px solid var(--pri);">
+    <div class="sec">⚡ 번개 개설</div>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr auto;gap:8px;align-items:end;">
+      <div><label class="lbl">벙 제목 *</label><input id="bt" placeholder="예: 송리단길 불금벙" onkeydown="if(event.key==='Enter')safe(addBung)"></div>
+      <div><label class="lbl">날짜</label><input id="bdt" type="date"></div>
+      <div><label class="lbl">1차 장소</label><select id="bp1"></select></div>
+      <div><label class="lbl">2차 장소</label><select id="bp2"></select></div>
+      <button class="btn bgr" style="padding:8px 18px;" onclick="safe(addBung)">⚡ 개설하기</button>
     </div>
-    <div class="card">
-      <div class="sec" style="margin-bottom:10px;">번개 목록 <span id="bCnt" style="color:var(--pri);font-size:12px;"></span></div>
-      <div id="bList" style="max-height:calc(100vh - 230px);overflow-y:auto;padding-right:3px;"></div>
-      <p id="bEmpty" style="color:var(--mt);font-size:12px;text-align:center;padding:18px;display:none;">번개가 없습니다.</p>
+    <p id="bCourseHint" style="display:none;font-size:11px;color:var(--pri);font-weight:600;margin-top:8px;background:var(--pl);padding:6px 10px;border-radius:8px;"></p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:14px;">
+    <div>
+      <!-- 리스트 뷰 -->
+      <div id="bViewList" class="card">
+        <div class="sec" style="margin-bottom:10px;">번개 목록</div>
+        <div id="bList" style="max-height:calc(100vh - 260px);overflow-y:auto;padding-right:3px;"></div>
+        <p id="bEmpty" style="color:var(--mt);font-size:12px;text-align:center;padding:18px;display:none;">번개가 없습니다.</p>
+      </div>
+      <!-- 캘린더 뷰 -->
+      <div id="bViewCal" class="card" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn bsub" onclick="calMove(-1)">◀</button>
+            <span id="calTitle" style="font-weight:800;font-size:14px;color:var(--pri);"></span>
+            <button class="btn bsub" onclick="calMove(1)">▶</button>
+          </div>
+          <span style="font-size:10px;color:var(--mt);">🔴 같은 날 2건 이상 · ⚠️ 벙 없는 금·토·일 · 📅 예정</span>
+        </div>
+        <div id="calBody"></div>
+      </div>
+
+      <!-- 추천 스트립 (API 연동 예정) -->
+      <div class="card" style="margin-top:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <div class="sec" style="margin-bottom:0;flex:none;">📌 이번 주 벙 후보</div>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span id="feedTs" style="font-size:10px;color:var(--mt);"></span>
+            <button id="feedRefreshBtn" class="btn bsub" onclick="safe(refreshFeed)">🔄 새로고침</button>
+          </span>
+        </div>
+        <div id="feedBody"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:11px;align-self:start;">
+      <div class="card">
+        <div class="sec" style="font-size:12px;">🔍 회원 참석 이력 검색</div>
+        <div style="display:flex;gap:5px;margin-bottom:8px;">
+          <input id="bSrch" placeholder="회원 이름 입력" onkeydown="if(event.key==='Enter')safe(runBSearch)">
+          <button class="btn bg" style="flex-shrink:0;padding:5px 10px;" onclick="safe(runBSearch)">검색</button>
+        </div>
+        <div id="bHistBox" style="display:none;" class="hist-box"></div>
+      </div>
+      <div class="card">
+        <div class="sec" style="font-size:12px;">💡 사용 안내</div>
+        <div id="bHelp" style="font-size:11px;color:var(--mt);line-height:1.9;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -363,6 +457,16 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <div id="bHist" style="overflow-y:auto;max-height:520px;flex:1;padding-right:3px;"></div>
     </div>
   </div>
+  <div style="display:grid;grid-template-columns:1fr 380px;gap:12px;">
+    <div class="card">
+      <div class="sec">📈 월별 추이 <span style="font-size:10px;color:var(--mt);font-weight:400;">(전체 누적 기준)</span></div>
+      <div style="position:relative;height:250px;"><canvas id="trendC"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="sec">📅 요일별 평균 참석 <span id="dowN" style="font-size:10px;color:var(--mt);font-weight:400;"></span></div>
+      <div style="position:relative;height:250px;"><canvas id="dowC"></canvas></div>
+    </div>
+  </div>
 </div>
 
 <!-- TAB 4: 경고/노쇼·거절·강퇴탈퇴 -->
@@ -385,6 +489,155 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
     <div style="overflow-y:auto;max-height:360px;"><table><thead><tr><th>이름</th><th>구분</th><th>기간</th><th>사유</th><th id="kvFixH" style="display:none;">관리</th></tr></thead><tbody id="kvB"></tbody></table></div>
   </div>
 </div>
+
+<!-- TAB 5: 장소맵 -->
+<div id="tab5" style="display:none;padding-top:12px;">
+  <div class="fbox" style="margin-bottom:10px;">
+    <button id="plcAddBtn" class="addbox" onclick="openPlaceModal()">＋ 장소 등록</button>
+    <span style="width:1px;height:22px;background:var(--bd);"></span>
+    <span style="font-size:11px;font-weight:700;color:var(--sb);">지역</span>
+    <select id="plcRg" onchange="safe(renderPlaces)" style="width:auto;font-size:11px;padding:4px 9px;"></select>
+    <span style="font-size:11px;font-weight:700;color:var(--sb);">차수</span>
+    <button class="ftg fton" id="plcR_" onclick="setPlcRound('')">전체</button>
+    <button class="ftg ftoff" id="plcR1" onclick="setPlcRound('1차')">1차</button>
+    <button class="ftg ftoff" id="plcR2" onclick="setPlcRound('2차')">2차</button>
+    <span style="font-size:11px;font-weight:700;color:var(--sb);">상태</span>
+    <select id="plcSt" onchange="safe(renderPlaces)" style="width:auto;font-size:11px;padding:4px 9px;">
+      <option value="">활성+보류</option><option>활성</option><option>보류</option><option>블랙</option><option value="__all">전체(블랙 포함)</option>
+    </select>
+    <span style="font-size:11px;font-weight:700;color:var(--sb);">정렬</span>
+    <select id="plcSort" onchange="safe(renderPlaces)" style="width:auto;font-size:11px;padding:4px 9px;">
+      <option value="recent">최근방문순</option><option value="old">오래된순</option><option value="use">사용많은순</option><option value="name">이름순</option><option value="new">등록최신순</option>
+    </select>
+    <input id="plcQ" placeholder="🔍 검색" style="width:100px;font-size:11px;padding:4px 8px;" oninput="safe(renderPlaces)">
+    <span id="plcCnt" style="margin-left:auto;font-size:11px;color:var(--pri);font-weight:700;"></span>
+  </div>
+  <div class="card" style="margin-bottom:10px;padding:9px 14px;">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <span style="font-size:11px;font-weight:700;color:var(--sb);flex-shrink:0;">카테고리</span>
+      <div id="plcCatBar" style="display:flex;flex-wrap:wrap;gap:2px;flex:1;"></div>
+      <button id="plcCatEditBtn" class="btn bsub" onclick="openCatModal()" style="flex-shrink:0;">⚙️ 편집</button>
+    </div>
+  </div>
+  <div id="plcGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;"></div>
+  <p id="plcEmpty" style="color:var(--mt);font-size:12px;text-align:center;padding:26px;display:none;">조건에 맞는 장소가 없습니다.</p>
+  <div class="slotbar">
+    <span style="font-size:11px;font-weight:800;color:var(--pri);">🧺 코스 슬롯</span>
+    <span class="slot" id="slot1" onclick="clearSlot('round1')">1차: 비어있음</span>
+    <span class="slot" id="slot2" onclick="clearSlot('round2')">2차: 비어있음</span>
+    <button class="btn bgr" style="padding:6px 14px;" onclick="safe(courseToBung)">⚡ 이 코스로 개설</button>
+    <span style="font-size:10px;color:var(--mt);">슬롯을 클릭하면 비웁니다</span>
+  </div>
+</div>
+
+<!-- TAB 6: 운영진 -->
+<div id="tab6" style="display:none;padding-top:12px;">
+  <div class="fbox" style="margin-bottom:10px;">
+    <span style="font-size:11px;font-weight:700;color:var(--sb);">🧑‍💼 회의록</span>
+    <select id="stfSel" onchange="safe(stfRender)" style="width:auto;font-size:12px;padding:4px 9px;font-weight:600;"></select>
+    <button class="addbox" onclick="safe(stfNew)">＋ 회의록 생성</button>
+    <span id="stfLockBadge" style="font-size:11px;font-weight:700;"></span>
+    <span style="margin-left:auto;display:flex;gap:6px;">
+      <button class="btn bg" style="padding:6px 14px;" onclick="safe(stfSave)">💾 저장</button>
+      <button id="stfLockBtn" class="btn bgold" style="padding:6px 14px;" onclick="safe(stfToggleLock)">🔒 확정</button>
+      <button class="btn bsub" style="padding:6px 12px;" onclick="safe(stfCopy)">📋 복사</button>
+    </span>
+  </div>
+  <div id="stfEmpty" class="card" style="text-align:center;padding:40px;color:var(--mt);font-size:12px;">
+    회의록이 없습니다. <b>＋ 회의록 생성</b>을 눌러 이번 달 회의록을 만드세요.<br>
+    <span style="font-size:11px;">생성 시 직전 월 지표가 자동으로 채워지고, 미완료 액션아이템이 이월됩니다.</span>
+  </div>
+  <div id="stfBody" style="display:none;grid-template-columns:1fr 1fr;gap:12px;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div class="sec">① 지난달 지표 <span id="stfMetTitle" style="font-size:10px;color:var(--mt);font-weight:400;"></span> <span style="font-size:10px;color:var(--gold);font-weight:600;">🔒 자동·스냅샷</span></div>
+        <div id="stfMet" class="kbox"></div>
+      </div>
+      <div class="card">
+        <div class="sec">② 잘된 점 / 아쉬운 점</div>
+        <label class="lbl">👍 잘된 점</label>
+        <textarea id="stfGood" rows="3" style="resize:vertical;margin-bottom:8px;" placeholder="이번 달 잘 굴러간 것"></textarea>
+        <label class="lbl">👎 아쉬운 점</label>
+        <textarea id="stfBad" rows="3" style="resize:vertical;" placeholder="개선이 필요한 것"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
+          <div class="sec" style="margin-bottom:0;flex:none;">③ 이슈 및 논의</div>
+          <button class="btn bsub" onclick="safe(stfAddIssue)">＋ 항목</button>
+        </div>
+        <div id="stfIssues"></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
+          <div class="sec" style="margin-bottom:0;flex:none;">④ 결정사항</div>
+          <button class="btn bsub" onclick="safe(stfAddDecision)">＋ 항목</button>
+        </div>
+        <div id="stfDecisions"></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;">
+          <div class="sec" style="margin-bottom:0;flex:none;">⑤ 다음달 계획 &amp; 액션아이템</div>
+          <button class="btn bsub" onclick="safe(stfAddAction)">＋ 항목</button>
+        </div>
+        <div class="stfrow hd"><span>할 일</span><span>담당</span><span>기한</span><span>상태</span><span></span></div>
+        <div id="stfActions"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- 장소 등록/수정 모달 -->
+<div id="plcMod" class="mov" style="display:none;" onclick="if(event.target===this)closeM('plcMod')">
+  <div class="mbx" style="max-width:440px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;">
+      <h3 id="plcModTitle" style="font-size:14px;font-weight:700;">🗺️ 장소 등록</h3>
+      <button onclick="closeM('plcMod')" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div><label class="lbl">장소명 *</label><input id="pmName" placeholder="예: 굽돌집"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><label class="lbl">지역</label><input id="pmRegion" placeholder="예: 송파" list="regionList"></div>
+        <div><label class="lbl">상태</label><select id="pmStatus"><option>활성</option><option>보류</option><option>블랙</option></select></div>
+      </div>
+      <div><label class="lbl">카테고리 (복수 선택)</label><div id="pmCats" style="display:flex;flex-wrap:wrap;gap:2px;padding:6px;background:var(--s2);border-radius:var(--rs);border:1.5px solid var(--b2);"></div></div>
+      <div><label class="lbl">차수</label>
+        <div style="display:flex;gap:6px;">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" id="pmR1" style="width:auto;">1차</label>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" id="pmR2" style="width:auto;">2차</label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><label class="lbl">최대 수용 인원</label><input id="pmCap" type="number" placeholder="예: 15"></div>
+        <div><label class="lbl">가격대 (1인)</label><input id="pmPrice" placeholder="예: 2~3만"></div>
+      </div>
+      <div><label class="lbl">네이버 지도 링크</label><input id="pmUrl" placeholder="https://naver.me/..."></div>
+      <div><label class="lbl">메모</label><textarea id="pmMemo" rows="2" style="resize:none;" placeholder="룸 있음, 예약 필수 등"></textarea></div>
+      <div id="pmDupWarn" style="display:none;font-size:11px;color:#dc2626;background:#fff1f2;padding:7px 10px;border-radius:8px;"></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn bgr" style="flex:1;padding:9px;font-weight:700;" onclick="safe(savePlace)">✅ 저장</button>
+        <button id="pmDelBtn" class="btn" style="display:none;background:#fee2e2;color:#dc2626;padding:9px 16px;" onclick="safe(deletePlace)">🗑 삭제</button>
+      </div>
+    </div>
+    <datalist id="regionList"></datalist>
+  </div>
+</div>
+
+<!-- 카테고리 마스터 편집 모달 -->
+<div id="catMod" class="mov" style="display:none;" onclick="if(event.target===this)closeM('catMod')">
+  <div class="mbx" style="max-width:360px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;">
+      <h3 style="font-size:14px;font-weight:700;">⚙️ 카테고리 편집</h3>
+      <button onclick="closeM('catMod')" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;gap:5px;margin-bottom:10px;">
+      <input id="catNew" placeholder="새 카테고리" onkeydown="if(event.key==='Enter')safe(addCat)">
+      <button class="btn bg" style="flex-shrink:0;padding:5px 12px;" onclick="safe(addCat)">추가</button>
+    </div>
+    <div id="catList" style="display:flex;flex-direction:column;gap:4px;"></div>
+  </div>
 </div>
 
 <!-- 강퇴/탈퇴 날짜 확인 모달 -->
@@ -568,6 +821,14 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 <script>
 'use strict';
 
+/* ══════════════════════════════════════════════════════════════
+   Cloudflare Worker 연결 설정 — 배포 후 아래 두 줄만 채우면 됩니다.
+   비워두면 추천 스트립이 '연동 준비중'으로 표시되고 나머지는 정상 동작합니다.
+   ⚠️ 여기에 공공 API 인증키를 넣지 마세요. 키는 Worker Secret 에만 둡니다.
+   ══════════════════════════════════════════════════════════════ */
+const WORKER_URL   = 'https://palette-eventfeed.rlqns59.workers.dev';
+const WORKER_TOKEN = 'palette-2026-refresh';
+
 /* ══ 비밀번호 ══ */
 const PW_VIEW='0505',PW_ADMIN='0501';
 let _isAdmin=false;
@@ -580,7 +841,16 @@ function checkPw(){
 }
 function unlock(isAdmin){
   document.getElementById('lockScreen').style.display='none';
-  document.getElementById('t2btn').style.display=isAdmin?'':'none';
+  /* v23: 조회용도 번개 관리 탭은 볼 수 있고, '번개 개설' 입력 UI만 숨긴다 */
+  document.getElementById('t2btn').style.display='';
+  document.getElementById('t5btn').style.display='';
+  document.getElementById('t6btn').style.display=isAdmin?'':'none';   /* 운영진 회의록: 관리자 전용 */
+  ['bAddToggle','plcAddBtn','plcCatEditBtn','feedRefreshBtn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isAdmin?'':'none';});
+  if(!isAdmin){const bc=document.getElementById('bungCreateBox');if(bc)bc.style.display='none';}
+  const bh=document.getElementById('bHelp');
+  if(bh)bh.innerHTML=isAdmin
+    ? '체크박스 = 당일취소<br>이름 클릭 → 참석 이력<br>✕ → 참석자 제외<br>💰 정산 버튼 → 정산시트<br>🗺️ 장소맵에서 코스를 담으면<br>여기 개설 폼에 자동 입력됩니다.'
+    : '👁 조회 전용 모드입니다.<br>이름 클릭 → 참석 이력 확인<br>번개 개설·수정·정산은<br>운영진 계정에서만 가능합니다.';
   document.getElementById('mLeft').style.display='none';
   document.getElementById('mGrid').style.gridTemplateColumns='1fr';
   const rtb=document.getElementById('regToggleBtn');if(rtb)rtb.style.display=isAdmin?'':'none';
@@ -597,10 +867,13 @@ function unlock(isAdmin){
 let _tab=1;
 function switchTab(n){
   _tab=n;
-  [1,2,3,4].forEach(i=>{document.getElementById('tab'+i).style.display=i===n?'block':'none';document.getElementById('t'+i+'btn').className='tb '+(i===n?'ta':'ti');});
+  [1,2,3,4,5,6].forEach(i=>{const t=document.getElementById('tab'+i);if(t)t.style.display=i===n?(i===6?'block':'block'):'none';const b=document.getElementById('t'+i+'btn');if(b)b.className='tb '+(i===n?'ta':'ti');});
   const pf=document.getElementById('periodFbox');if(pf)pf.style.display=(n===3||n===4)?'flex':'none';
+  if(n===2)safe(renderBungs);
   if(n===3)safe(renderDash);
   if(n===4)safe(renderTab4);
+  if(n===5)safe(renderPlaces);
+  if(n===6)safe(stfRenderSel);
 }
 function safe(fn,...a){try{return fn(...a);}catch(e){console.error(fn?.name,e);}}
 
@@ -612,13 +885,33 @@ const GF={
 };
 
 /* ══ 내장 초기 데이터 ══ */
-const EMBEDDED={"members":[{"id":"mprr85k9g1gna","name":"김성민","gender":"여","birthYear":1989,"height":"175","mbti":"ESFP","role":"모임장","grade":"일반","region":"","birth":"1989-04-28","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k97yxve","name":"김동욱","gender":"남","birthYear":1991,"height":"180","mbti":"ESTJ","role":"운영진","grade":"일반","region":"","birth":"1991-10-07","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9zvyq5","name":"이현준","gender":"남","birthYear":1991,"height":"179","mbti":"ISTP","role":"운영진","grade":"일반","region":"","birth":"1991-11-16","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9ouuiu","name":"이세지","gender":"여","birthYear":1993,"height":"168","mbti":"ISTJ","role":"운영진","grade":"일반","region":"","birth":"1993-05-10","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k97bcw9","name":"정준기","gender":"남","birthYear":1992,"height":"177","mbti":"INFP","role":"일반","grade":"일반","region":"강남","birth":"1992-01-30","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9eq9jm","name":"박초희","gender":"여","birthYear":1991,"height":"166","mbti":"ENTJ","role":"일반","grade":"일반","region":"문정","birth":"1991-01-11","joindate":"2026-05-04","note":"","status":"active"},{"id":"mprr85k9agquc","name":"박초은","gender":"여","birthYear":1993,"height":"168","mbti":"INFP","role":"일반","grade":"일반","region":"문정","birth":"1993-02-13","joindate":"2026-05-04","note":"건강이슈 유예","status":"active"},{"id":"mprr85k9ohy9p","name":"김상규","gender":"남","birthYear":1987,"height":"180","mbti":"ESFJ","role":"일반","grade":"일반","region":"선정릉","birth":"1987-03-02","joindate":"2026-05-05","note":"","status":"active"},{"id":"mprr85k9mcnt6","name":"김진연","gender":"여","birthYear":1990,"height":"164","mbti":"ISTJ","role":"일반","grade":"일반","region":"천호/문정","birth":"1990-12-08","joindate":"2026-05-06","note":"5월 29일 벙 당일취소","status":"active"},{"id":"mprr85k9k3qap","name":"이승민","gender":"남","birthYear":1992,"height":"187","mbti":"ISFJ","role":"일반","grade":"일반","region":"천호/부천","birth":"1992-05-02","joindate":"2026-05-06","note":"","status":"active"},{"id":"mprr85k94035j","name":"정세연","gender":"여","birthYear":1987,"height":"166","mbti":"ESTP","role":"일반","grade":"일반","region":"송파","birth":"1987-03-20","joindate":"2026-05-06","note":"","status":"active"},{"id":"mprr85k9pmdc9","name":"김원재","gender":"남","birthYear":1987,"height":"179","mbti":"ISTP","role":"일반","grade":"일반","region":"송파","birth":"1987-07-30","joindate":"2026-05-08","note":"","status":"active"},{"id":"mprr85k95r9ih","name":"전해성","gender":"남","birthYear":1991,"height":"178","mbti":"ENFJ","role":"일반","grade":"일반","region":"광진","birth":"1991-03-12","joindate":"2026-05-09","note":"","status":"active"},{"id":"mprr85k9c9t2l","name":"김동민","gender":"남","birthYear":1992,"height":"180","mbti":"ENFP","role":"일반","grade":"일반","region":"잠새","birth":"1992-12-13","joindate":"2026-05-12","note":"","status":"active"},{"id":"mprr85k94gglj","name":"이승현","gender":"남","birthYear":1994,"height":"175","mbti":"ESTJ","role":"일반","grade":"일반","region":"암사/문정","birth":"1994-03-02","joindate":"2026-05-12","note":"[경고] 5/24 선넘는 말","status":"active"},{"id":"mprr85k97pba0","name":"박고은","gender":"여","birthYear":1996,"height":"160","mbti":"ENFP","role":"일반","grade":"일반","region":"망원/잠실","birth":"1996-01-23","joindate":"2026-05-12","note":"","status":"active"},{"id":"mprr85k9bdc5t","name":"강명구","gender":"남","birthYear":1988,"height":"177","mbti":"ESTP","role":"일반","grade":"일반","region":"잠실/하남","birth":"1988-09-23","joindate":"2026-05-14","note":"","status":"active"},{"id":"mprr85k9d2ojn","name":"이윤주","gender":"여","birthYear":1993,"height":"172","mbti":"ISFP","role":"일반","grade":"일반","region":"잠실/선정릉","birth":"1993-10-25","joindate":"2026-05-17","note":"","status":"active"},{"id":"mprr85k9uek9p","name":"김민호","gender":"남","birthYear":1990,"height":"182","mbti":"ISTJ","role":"일반","grade":"일반","region":"분당/잠실","birth":"1990-09-13","joindate":"2026-05-19","note":"","status":"active"},{"id":"mprr85k9vyvb6","name":"박소진","gender":"여","birthYear":1994,"height":"155","mbti":"INFP","role":"일반","grade":"일반","region":"구리/판교","birth":"1994-02-06","joindate":"2026-05-21","note":"","status":"active"},{"id":"mprr85k9fxery","name":"김규린","gender":"여","birthYear":1989,"height":"165","mbti":"ENFJ","role":"일반","grade":"일반","region":"방이/반포","birth":"1989-05-04","joindate":"2026-05-22","note":"","status":"active"},{"id":"mprr85k9qbzma","name":"강인호","gender":"남","birthYear":1993,"height":"178","mbti":"ISTP","role":"일반","grade":"일반","region":"성남/가락","birth":"1993-01-29","joindate":"2026-05-22","note":"","status":"active"},{"id":"mprr85k9jw1fp","name":"유서연","gender":"여","birthYear":1988,"height":"170","mbti":"INFP","role":"일반","grade":"일반","region":"송파","birth":"1988-07-01","joindate":"2026-05-25","note":"","status":"active"},{"id":"mprr85k9820a8","name":"오진성","gender":"남","birthYear":1995,"height":"173","mbti":"ISFP","role":"일반","grade":"일반","region":"망우/다산","birth":"1995-09-16","joindate":"2026-05-29","note":"","status":"active"},{"id":"mpuhv7qprun80","name":"조아미","gender":"여","birthYear":1993,"height":"162","mbti":"ESTJ","role":"일반","grade":"일반","region":"하남미사","birth":"1993-10-19","joindate":"2026-05-31","note":"","status":"active"},{"id":"mpuhwiz4kowgs","name":"강기성","gender":"남","birthYear":1988,"height":"172","mbti":"ESTJ","role":"일반","grade":"일반","region":"마천/성북구","birth":"1988-04-09","joindate":"2026-05-31","note":"","status":"active"},{"id":"mpuk0tuaf15ka","name":"이경진","gender":"여","birthYear":1993,"height":"166","mbti":"INTP","role":"일반","grade":"일반","region":"하남/건대","birth":"1993-01-17","joindate":"2026-05-30","note":"","status":"active"}],"archived":[{"id":"mprr85k95u3zt","name":"박웅희","gender":"남","birthYear":1994,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-04","note":"[강퇴] 2026/5/17","status":"kicked","exitDate":"2026/5/17","period":"5/4~5/17(13일)","reason":"강퇴"},{"id":"mprr85kaxw8hu","name":"허진","gender":"남","birthYear":1989,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-20","note":"[탈퇴] 2026/5/22","status":"left","exitDate":"2026/5/22","period":"5/20~5/22(2일)","reason":"탈퇴"},{"id":"mprr85kasddgk","name":"김병규","gender":"남","birthYear":1990,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-17","note":"[강퇴-무응답] 2026/5/23","status":"kicked","exitDate":"2026/5/23","period":"5/17~5/23(6일)","reason":"강퇴-무응답"},{"id":"mprr85karfcat","name":"이현빈","gender":"여","birthYear":1994,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-23","note":"[탈퇴] 2026/5/25","status":"left","exitDate":"2026/5/25","period":"5/23~5/25(2일)","reason":"탈퇴"},{"id":"mprr85kanhunf","name":"윤수진","gender":"여","birthYear":1993,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-12","note":"[강퇴-미참석] 2026/5/26","status":"kicked","exitDate":"2026/5/26","period":"5/12~5/26(14일)","reason":"강퇴-미참석"},{"id":"mprr85kahq3ub","name":"김현중","gender":"남","birthYear":1991,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-19","note":"[자진탈퇴] 2026/5/27","status":"left","exitDate":"2026/5/27","period":"5/19~5/27(8일)","reason":"자진탈퇴"},{"id":"mprr85kav2um8","name":"배하림","gender":"여","birthYear":1994,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-03","note":"[자진탈퇴(욕설)] 2026/5/28","status":"left","exitDate":"2026/5/28","period":"5/3~5/28(25일)","reason":"자진탈퇴(욕설)"},{"id":"mprrb3zonjara","name":"예시남","gender":"남","birthYear":1993,"height":"181","mbti":"INTJ","role":"일반","grade":"일반","region":"송파","birth":"2026-06-05","joindate":"2026-05-29","note":"[강퇴] 2026/5/30","status":"kicked","exitDate":"2026/5/30","period":"5/29~5/30(1일)","reason":"강퇴"}],"rejects":[{"id":"mprr85kazb8c4","no":1,"name":"김요섭","gender":"남","rejectDate":"2026-05-06","reason":"투표 반대"},{"id":"mprr85kag0pxq","no":2,"name":"이성희","gender":"남","rejectDate":"2026-05-06","reason":"과거 제보"}],"bungs":[{"id":"mpui0tkymisdk","title":"올공벙","date":"2026-06-13","attendees":["mprr85k9g1gna","mprr85k9ouuiu","mprr85k95r9ih"],"cancelled":[]},{"id":"mpuhz8o5ficvl","title":"문정벙","date":"2026-06-06","attendees":["mprr85k97yxve","mprr85k9zvyq5","mprr85k97bcw9","mprr85k9k3qap","mprr85k94gglj","mprr85k97pba0","mprr85k9d2ojn","mprr85k9uek9p","mprr85k9jw1fp","mpuhv7qprun80"],"cancelled":[]},{"id":"mprr85ka5oed1","title":"첫벙","date":"2026-05-09","attendees":["mprr85k9g1gna","mprr85k97yxve","mprr85k9zvyq5","mprr85k9ouuiu","mprr85k97bcw9"],"cancelled":[]}],"warnings":[]};
+const EMBEDDED={"members":[{"id":"mprr85k9g1gna","name":"김성민","gender":"여","birthYear":1989,"age":38,"height":"175","mbti":"ESFP","role":"모임장","grade":"일반","region":"","birth":"1989-04-28","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k97yxve","name":"김동욱","gender":"남","birthYear":1991,"age":36,"height":"180","mbti":"ESTJ","role":"운영진","grade":"일반","region":"","birth":"1991-10-07","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9zvyq5","name":"이현준","gender":"남","birthYear":1991,"age":36,"height":"179","mbti":"ISTP","role":"운영진","grade":"일반","region":"","birth":"1991-11-16","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9ouuiu","name":"이세지","gender":"여","birthYear":1993,"age":34,"height":"168","mbti":"ISTJ","role":"운영진","grade":"일반","region":"","birth":"1993-05-10","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k97bcw9","name":"정준기","gender":"남","birthYear":1992,"age":35,"height":"177","mbti":"INFP","role":"일반","grade":"일반","region":"강남","birth":"1992-01-30","joindate":"2026-05-02","note":"","status":"active"},{"id":"mprr85k9ohy9p","name":"김상규","gender":"남","birthYear":1987,"age":40,"height":"180","mbti":"ESFJ","role":"일반","grade":"일반","region":"선정릉","birth":"1987-03-02","joindate":"2026-05-05","note":"","status":"active"},{"id":"mprr85k9k3qap","name":"이승민","gender":"남","birthYear":1992,"age":35,"height":"187","mbti":"ISFJ","role":"일반","grade":"일반","region":"천호/부천","birth":"1992-05-02","joindate":"2026-05-06","note":"해산물 안먹음/회는 먹음","status":"active"},{"id":"mprr85k94035j","name":"정세연","gender":"여","birthYear":1987,"age":40,"height":"166","mbti":"ESTP","role":"일반","grade":"일반","region":"송파","birth":"1987-03-20","joindate":"2026-05-06","note":"","status":"active"},{"id":"mprr85k95r9ih","name":"전해성","gender":"남","birthYear":1991,"age":36,"height":"178","mbti":"ENFJ","role":"일반","grade":"일반","region":"광진","birth":"1991-03-12","joindate":"2026-05-09","note":"","status":"active"},{"id":"mprr85k94gglj","name":"이승현","gender":"남","birthYear":1994,"age":33,"height":"175","mbti":"ESTJ","role":"일반","grade":"일반","region":"암사/문정","birth":"1994-03-02","joindate":"2026-05-12","note":"[경고] 5/24 선넘는 말\n[주의] 6/6 주시대상","status":"active"},{"id":"mprr85k97pba0","name":"박고은","gender":"여","birthYear":1996,"age":31,"height":"160","mbti":"ENFP","role":"일반","grade":"일반","region":"망원/잠실","birth":"1996-01-23","joindate":"2026-05-12","note":"","status":"active"},{"id":"mprr85k9d2ojn","name":"이윤주","gender":"여","birthYear":1993,"age":34,"height":"172","mbti":"ISFP","role":"일반","grade":"일반","region":"잠실/선정릉","birth":"1993-10-25","joindate":"2026-05-17","note":"","status":"active"},{"id":"mprr85k9fxery","name":"김규린","gender":"여","birthYear":1989,"age":38,"height":"165","mbti":"ENFJ","role":"일반","grade":"일반","region":"방이/반포","birth":"1989-05-04","joindate":"2026-05-22","note":"","status":"active"},{"id":"mprr85k9qbzma","name":"강인호","gender":"남","birthYear":1993,"age":34,"height":"178","mbti":"ISTP","role":"일반","grade":"일반","region":"성남/가락","birth":"1993-01-29","joindate":"2026-05-22","note":"","status":"active"},{"id":"mprr85k9jw1fp","name":"류서연","gender":"여","birthYear":1988,"age":39,"height":"170","mbti":"INFP","role":"일반","grade":"일반","region":"송파","birth":"1988-07-01","joindate":"2026-05-25","note":"","status":"active"},{"id":"mprr85k9820a8","name":"오진성","gender":"남","birthYear":1995,"age":32,"height":"173","mbti":"ISFP","role":"일반","grade":"일반","region":"망우/다산","birth":"1995-09-16","joindate":"2026-05-29","note":"","status":"active"},{"id":"mpuhv7qprun80","name":"조아미","gender":"여","birthYear":1993,"age":34,"height":"162","mbti":"ESTJ","role":"일반","grade":"일반","region":"하남미사","birth":"1993-10-19","joindate":"2026-05-31","note":"","status":"active"},{"id":"mpuhwiz4kowgs","name":"강기성","gender":"남","birthYear":1988,"age":39,"height":"172","mbti":"ESTJ","role":"일반","grade":"일반","region":"마천/성북구","birth":"1988-04-09","joindate":"2026-05-31","note":"","status":"active"},{"id":"mpuk0tuaf15ka","name":"이경진","gender":"여","birthYear":1993,"age":34,"height":"166","mbti":"INTP","role":"일반","grade":"일반","region":"하남/건대","birth":"1993-01-17","joindate":"2026-05-30","note":"","status":"active"},{"id":"mq3evwlyspu06","name":"이현수","gender":"남","birthYear":1988,"age":39,"height":"180","mbti":"ESTJ","role":"일반","grade":"일반","region":"천호/송파","birth":"1988-12-14","joindate":"2026-05-30","note":"갑각류 알러지(새우 조개)/연어 참치는 먹음","status":"active"},{"id":"mqced0c4c6ky0","name":"박현철","gender":"남","birthYear":1989,"age":38,"height":"170","mbti":"INTP","role":"일반","grade":"일반","region":"송파/잠실","birth":"1989-03-21","joindate":"2026-06-13","note":"","status":"active"},{"id":"mqkfe0p7b5cwi","name":"김도현","gender":"남","birthYear":1993,"age":34,"height":"182","mbti":"ISFJ","role":"일반","grade":"일반","region":"강동/강동","birth":"1993-05-18","joindate":"2026-06-18","note":"","status":"active"},{"id":"mqkk61x3vquoz","name":"이연호","gender":"남","birthYear":1991,"age":36,"height":"175","mbti":"ESTP","role":"일반","grade":"일반","region":"구의","birth":"1991-08-01","joindate":"2026-06-19","note":"","status":"active"},{"id":"ms76sp3hrnz85","name":"임성욱","gender":"여","birthYear":1993,"age":34,"height":"161","mbti":"ESTP","role":"일반","grade":"일반","region":"송파/송파","birth":"1993-04-16","joindate":"2026-07-06","note":"","status":"active"},{"id":"ms76tl9wdw13k","name":"황유진","gender":"여","birthYear":1993,"age":34,"height":"173","mbti":"INTP","role":"일반","grade":"일반","region":"구의/판교","birth":"1993-03-09","joindate":"2026-07-14","note":"","status":"active"},{"id":"ms76v7pijvfqq","name":"이향","gender":"여","birthYear":1991,"age":36,"height":"161","mbti":"ISFP","role":"일반","grade":"일반","region":"관악/강남","birth":"1991-10-03","joindate":"2026-07-24","note":"윤주 친한언니","status":"active"},{"id":"ms76w6ryr7999","name":"최우리","gender":"여","birthYear":1992,"age":35,"height":"165","mbti":"INFJ","role":"일반","grade":"일반","region":"강동/경기광주","birth":"1992-01-04","joindate":"2026-07-27","note":"","status":"active"},{"id":"ms76wz5aeitgz","name":"장수인","gender":"여","birthYear":1991,"age":36,"height":"167","mbti":"ISFP","role":"일반","grade":"일반","region":"성동/강남","birth":"1991-02-01","joindate":"2026-07-29","note":"세지 지인","status":"active"},{"id":"ms76xy065i8kf","name":"박소은","gender":"여","birthYear":1994,"age":33,"height":"163","mbti":"ISFP","role":"일반","grade":"일반","region":"송파/위례","birth":"1994-05-02","joindate":"2026-07-30","note":"","status":"active"},{"id":"ms77lp0k9r9xx","name":"김인혜","gender":"여","birthYear":1995,"age":32,"height":"158","mbti":"ENFJ","role":"일반","grade":"일반","region":"송파/잠실","birth":"1995-12-11","joindate":"2026-07-30","note":"","status":"active"}],"archived":[{"id":"mprr85k95u3zt","name":"박웅희","gender":"남","birthYear":1994,"age":33,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-04","note":"[강퇴] 2026/5/17","status":"kicked","exitDate":"2026/5/17","period":"5/4~5/17(13일)","reason":"강퇴"},{"id":"mprr85kaxw8hu","name":"허진","gender":"남","birthYear":1989,"age":38,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-20","note":"[탈퇴] 2026/5/22","status":"left","exitDate":"2026/5/22","period":"5/20~5/22(2일)","reason":"탈퇴"},{"id":"mprr85kasddgk","name":"김병규","gender":"남","birthYear":1990,"age":37,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-17","note":"[강퇴-무응답] 2026/5/23","status":"kicked","exitDate":"2026/5/23","period":"5/17~5/23(6일)","reason":"강퇴-무응답"},{"id":"mprr85karfcat","name":"이현빈","gender":"여","birthYear":1994,"age":33,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-23","note":"[탈퇴] 2026/5/25","status":"left","exitDate":"2026/5/25","period":"5/23~5/25(2일)","reason":"탈퇴"},{"id":"mprr85kanhunf","name":"윤수진","gender":"여","birthYear":1993,"age":34,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-12","note":"[강퇴-미참석] 2026/5/26","status":"kicked","exitDate":"2026/5/26","period":"5/12~5/26(14일)","reason":"강퇴-미참석"},{"id":"mprr85kahq3ub","name":"김현중","gender":"남","birthYear":1991,"age":36,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-19","note":"[자진탈퇴] 2026/5/27","status":"left","exitDate":"2026/5/27","period":"5/19~5/27(8일)","reason":"자진탈퇴"},{"id":"mprr85kav2um8","name":"배하림","gender":"여","birthYear":1994,"age":33,"height":"","mbti":"","role":"일반","grade":"일반","region":"","birth":"","joindate":"2026-05-03","note":"[자진탈퇴(욕설)] 2026/5/28","status":"left","exitDate":"2026/5/28","period":"5/3~5/28(25일)","reason":"자진탈퇴(욕설)"},{"id":"mprrb3zonjara","name":"예시남","gender":"남","birthYear":1993,"age":34,"height":"181","mbti":"INTJ","role":"일반","grade":"일반","region":"송파","birth":"2026-06-05","joindate":"2026-05-29","note":"[강퇴] 2026/5/30","status":"kicked","exitDate":"2026/5/30","period":"5/29~5/30(1일)","reason":"강퇴"},{"id":"mq3ey9v4oss5x","name":"오다미","gender":"여","birthYear":1991,"age":36,"height":"158","mbti":"ISFP","role":"일반","grade":"일반","region":"송파","birth":"1991-04-16","joindate":"2026-06-04","note":"[탈퇴] 2026. 6. 19.","status":"left","exitDate":"2026/6/19","reason":"탈퇴","period":"6/4~6/19(16일)"},{"id":"mprr85k9uek9p","name":"김민호","gender":"남","birthYear":1990,"age":37,"height":"182","mbti":"ISTJ","role":"일반","grade":"일반","region":"분당/잠실","birth":"1990-09-13","joindate":"2026-05-19","note":"[노쇼 6/14]\n[탈퇴] 2026. 6. 21. - 자진탈퇴","status":"left","exitDate":"2026/6/21","reason":"탈퇴(자진탈퇴)","period":"5/19~6/21(34일)"},{"id":"mq3exf7snce45","name":"이예림","gender":"여","birthYear":1990,"age":37,"height":"167","mbti":"ISFP","role":"일반","grade":"일반","region":"강동구청/둔촌","birth":"1990-11-23","joindate":"2026-06-02","note":"[6/6] 당일노쇼\n[탈퇴] 2026. 6. 22. - 사교모임 3개(정리불가) 탈퇴","status":"left","exitDate":"2026/6/22","reason":"탈퇴(사교모임 3개(정리불가) 탈퇴)","period":"6/2~6/22(21일)"},{"id":"mprr85k9c9t2l","name":"김동민","gender":"남","birthYear":1992,"age":35,"height":"180","mbti":"ENFP","role":"일반","grade":"일반","region":"잠새","birth":"1992-12-13","joindate":"2026-05-12","note":"[탈퇴] 2026. 6. 25. - 자진탈퇴","status":"left","exitDate":"2026/6/25","reason":"탈퇴(자진탈퇴)","period":"5/12~6/25(45일)"},{"id":"mprr85k9eq9jm","name":"박초희","gender":"여","birthYear":1991,"age":36,"height":"166","mbti":"ENTJ","role":"일반","grade":"일반","region":"문정","birth":"1991-01-11","joindate":"2026-05-04","note":"[탈퇴] 2026. 6. 28. - 유령회원 정리","status":"left","exitDate":"2026/6/28","reason":"탈퇴(유령회원 정리)","period":"5/4~6/28(56일)"},{"id":"mprr85k9agquc","name":"박초은","gender":"여","birthYear":1993,"age":34,"height":"168","mbti":"INFP","role":"일반","grade":"일반","region":"문정","birth":"1993-02-13","joindate":"2026-05-04","note":"건강이슈 유예\n[탈퇴] 2026. 6. 28. - 유령회원정리","status":"left","exitDate":"2026/6/28","reason":"탈퇴(유령회원정리)","period":"5/4~6/28(56일)"},{"id":"mprr85k9vyvb6","name":"박소진","gender":"여","birthYear":1994,"age":33,"height":"155","mbti":"INFP","role":"일반","grade":"일반","region":"구리/판교","birth":"1994-02-06","joindate":"2026-05-21","note":"[탈퇴] 2026. 6. 28. - 자진찰퇴(무매력)","status":"left","exitDate":"2026/6/28","reason":"탈퇴(자진찰퇴(무매력))","period":"5/21~6/28(39일)"},{"id":"mprr85k9mcnt6","name":"김진연","gender":"여","birthYear":1990,"age":37,"height":"164","mbti":"ISTJ","role":"일반","grade":"일반","region":"천호/문정","birth":"1990-12-08","joindate":"2026-05-06","note":"5월 29일 벙 당일취소\n[탈퇴] 2026. 6. 29. - 자진탈퇴","status":"left","exitDate":"2026/6/29","reason":"탈퇴(자진탈퇴)","period":"5/6~6/29(55일)"},{"id":"mprr85k9pmdc9","name":"김원재","gender":"남","birthYear":1987,"age":40,"height":"179","mbti":"ISTP","role":"일반","grade":"일반","region":"송파","birth":"1987-07-30","joindate":"2026-05-08","note":"[6/13]정참고지/늦참만함(다음 경고. 2회 강퇴)\n[탈퇴] 2026. 6. 29. - 자진탈퇴(유령)","status":"left","exitDate":"2026/6/29","reason":"탈퇴(자진탈퇴(유령))","period":"5/8~6/29(53일)"},{"id":"mq3ez9oei9moy","name":"주지윤","gender":"여","birthYear":1993,"age":34,"height":"161","mbti":"ISTP","role":"일반","grade":"일반","region":"송파","birth":"1993-07-07","joindate":"2026-06-06","note":"[탈퇴] 2026. 6. 30. - 자진탈퇴","status":"left","exitDate":"2026/6/30","reason":"탈퇴(자진탈퇴)","period":"6/6~6/30(25일)"},{"id":"mprr85k9bdc5t","name":"강명구","gender":"남","birthYear":1988,"age":39,"height":"177","mbti":"ESTP","role":"일반","grade":"일반","region":"잠실/하남","birth":"1988-09-23","joindate":"2026-05-14","note":"[6/20 경고: 벙 늦참해서 아침까지 늘어짐_동욱 / 여자에게 하는행태(한명만걸려라)]\n[6/25 경고: 무례함 누적_정산 영수증 띡, 뒷말 전달 누적]\n[탈퇴] 2026. 7. 12. - 탈퇴(경고3회)","status":"left","exitDate":"2026/7/12","reason":"탈퇴(탈퇴(경고3회))","period":"5/14~7/12(60일)"},{"id":"mqxj9y8r4775f","name":"이수경","gender":"여","birthYear":1995,"age":32,"height":"165","mbti":"ESFJ","role":"일반","grade":"일반","region":"송파/용산","birth":"1995-12-26","joindate":"2026-06-28","note":"[탈퇴] 2026. 7. 13. - 탈퇴(무응답)","status":"left","exitDate":"2026/7/13","reason":"탈퇴(탈퇴(무응답))","period":"6/28~7/13(16일)"}],"rejects":[{"id":"mprr85kazb8c4","no":1,"name":"김요섭","gender":"남","rejectDate":"2026-05-06","reason":"투표 반대","status":"rejected"},{"id":"mprr85kag0pxq","no":2,"name":"이성희","gender":"남","rejectDate":"2026-05-06","reason":"과거 제보","status":"rejected"},{"id":"mprr85kangpmr","no":3,"name":"박기영","gender":"남","rejectDate":"2026-05-09","reason":"투표 반대","status":"rejected"},{"id":"mprr85ka7vnqm","no":4,"name":"신세린","gender":"남","rejectDate":"2026-05-11","reason":"투표 반대","status":"rejected"},{"id":"mprr85kamtn1t","no":5,"name":"강성은","gender":"남","rejectDate":"2026-05-13","reason":"투표 반대","status":"rejected"},{"id":"mprr85kap5b8y","no":6,"name":"서성민","gender":"여","rejectDate":"2026-05-15","reason":"투표 반대","status":"rejected"},{"id":"mprr85kak6k8j","no":7,"name":"김형근","gender":"남","rejectDate":"2026-05-16","reason":"투표 반대","status":"rejected"},{"id":"mprr85ka09cwo","no":8,"name":"이승조","gender":"남","rejectDate":"2026-05-16","reason":"투표 반대","status":"rejected"},{"id":"mprr85kadbdqk","no":9,"name":"임성욱","gender":"여","rejectDate":"2026-05-16","reason":"무응답","status":"rejected"},{"id":"mprr85ka9dp7w","no":10,"name":"손창일","gender":"남","rejectDate":"2026-05-16","reason":"투표 반대","status":"rejected"},{"id":"mprr85kalpzw0","no":11,"name":"박기영","gender":"남","rejectDate":"2026-05-16","reason":"투표 반대","status":"rejected"},{"id":"mprr85kaom9w6","no":12,"name":"정승","gender":"남","rejectDate":"2026-05-16","reason":"투표 반대","status":"rejected"},{"id":"mprr85ka9p2lm","no":13,"name":"마규원","gender":"남","rejectDate":"2026-05-17","reason":"투표 반대","status":"rejected"},{"id":"mprr85kacy7yf","no":14,"name":"장영대","gender":"남","rejectDate":"2026-05-18","reason":"투표 반대","status":"rejected"},{"id":"mprr85kajzzz5","no":15,"name":"최경환","gender":"남","rejectDate":"2026-05-18","reason":"투표 반대","status":"rejected"},{"id":"mprr85ka65fcj","no":16,"name":"강수현","gender":"남","rejectDate":"2026-05-20","reason":"투표 반대","status":"rejected"},{"id":"mprr85katpvf0","no":17,"name":"구하빈","gender":"남","rejectDate":"2026-05-20","reason":"투표 반대","status":"rejected"},{"id":"mprr85kae22yo","no":18,"name":"양유진","gender":"여","rejectDate":"2026-05-21","reason":"투표 반대","status":"rejected"},{"id":"mprr85ka6cm69","no":19,"name":"송찬섭","gender":"남","rejectDate":"2026-05-24","reason":"투표 반대","status":"rejected"},{"id":"mprr85kanc0df","no":20,"name":"김종윤","gender":"남","rejectDate":"2026-05-24","reason":"투표 반대","status":"rejected"},{"id":"mprr85kas27vr","no":21,"name":"박형준","gender":"남","rejectDate":"2026-05-25","reason":"투표 반대","status":"rejected"},{"id":"mprr85ka3ttjn","no":22,"name":"정용종","gender":"남","rejectDate":"2026-05-23","reason":"투표 반대","status":"rejected"},{"id":"mprr85kaze38c","no":23,"name":"박선준","gender":"남","rejectDate":"2026-05-25","reason":"투표 반대","status":"rejected"},{"id":"mprr85kanui04","no":24,"name":"권도우","gender":"남","rejectDate":"2026-05-26","reason":"투표 반대","status":"rejected"},{"id":"mprr85kae37j6","no":25,"name":"정영흠","gender":"남","rejectDate":"2026-05-26","reason":"투표 반대","status":"rejected"},{"id":"mprr85kakdo6a","no":26,"name":"황윤상","gender":"남","rejectDate":"2026-05-26","reason":"투표 반대","status":"rejected"},{"id":"mprr85kaj8t7t","no":27,"name":"김재석","gender":"남","rejectDate":"2026-05-28","reason":"과거 제보","status":"rejected"},{"id":"mprr85kawssim","no":28,"name":"최승진","gender":"남","rejectDate":"2026-05-28","reason":"투표 반대","status":"rejected"},{"id":"mq3frw2ulrxvf","no":30,"name":"정균호","gender":"남","rejectDate":"2026-06-04","reason":"투표 반대","status":"rejected"},{"id":"mq3fskcltdppq","no":31,"name":"김동준","gender":"남","rejectDate":"2026-06-03","reason":"투표 반대","status":"rejected"},{"id":"mq3ftdlw4pd55","no":32,"name":"임정열","gender":"남","rejectDate":"2026-06-02","reason":"티키타카/반대사유","status":"rejected"},{"id":"mq3ftsjwsphug","no":33,"name":"장신일","gender":"남","rejectDate":"2026-06-02","reason":"투표 반대","status":"rejected"},{"id":"mq3fu67zhoynv","no":34,"name":"김윤수","gender":"남","rejectDate":"2026-06-01","reason":"투표 반대","status":"rejected"},{"id":"mq3fvh3redwex","no":35,"name":"강병현","gender":"남","rejectDate":"2026-05-28","reason":"투표 반대","status":"rejected"},{"id":"mq6f4ctb6jf9t","no":36,"name":"송기영","gender":"남","rejectDate":"2026-06-09","reason":"투표 반대"},{"id":"mq7coz6kg9ajr","no":37,"name":"박성호","gender":"남","rejectDate":"2026-06-10","reason":"투표 반대"},{"id":"mq7f1s99za0rx","no":37,"name":"전승예","gender":"여","rejectDate":"2026-06-06","reason":"자진탈퇴/무알콜 논의중"},{"id":"mq7t0a3dtfg4r","no":38,"name":"염태환","gender":"남","rejectDate":"2026-06-10","reason":"투표 반대"},{"id":"mq8vucruuto33","no":39,"name":"김명록","gender":"남","rejectDate":"2026-06-10","reason":"투표 반대"},{"id":"mqg5f2akot467","no":40,"name":"차성진","gender":"남","rejectDate":"2026-06-15","reason":"투표 반대"},{"id":"mqkfc1xomk9gv","no":41,"name":"황재민","gender":"남","rejectDate":"2026-06-16","reason":"사교모임3개 적발 강퇴"},{"id":"mqkfceqsf91jg","no":42,"name":"이준호","gender":"남","rejectDate":"2026-06-18","reason":"투표 반대"},{"id":"mqkfczrxuzszt","no":43,"name":"유재민","gender":"남","rejectDate":"2026-06-19","reason":"투표 반대"},{"id":"mqlqkp3jeg7so","no":44,"name":"박병진","gender":"남","rejectDate":"2026-06-20","reason":"투표 반대"},{"id":"mqp9ck3d8w3yi","no":45,"name":"이준흠","gender":"남","rejectDate":"2026-06-22","reason":"투표 반대"},{"id":"ms77hh6gfqrur","no":46,"name":"신선화","gender":"여","rejectDate":"2026-07-09","reason":"투표 반대"},{"id":"ms77hxjvrpgqg","no":47,"name":"김기흥","gender":"남","rejectDate":"2026-07-14","reason":"투표 반대"},{"id":"ms77ic1p8en6i","no":48,"name":"백종대","gender":"남","rejectDate":"2026-07-15","reason":"투표 반대"},{"id":"ms77in2dmo1zg","no":49,"name":"이진성","gender":"남","rejectDate":"2026-07-24","reason":"투표 반대"},{"id":"ms77jb9zpl9mi","no":50,"name":"유자홍","gender":"여","rejectDate":"2026-07-29","reason":"가입후 하루뒤 자진탈퇴"},{"id":"ms77jnlsauu88","no":51,"name":"윤태흠","gender":"남","rejectDate":"2026-07-29","reason":"투표 반대"},{"id":"ms77jxma64h2p","no":52,"name":"김민기","gender":"남","rejectDate":"2026-07-30","reason":"투표 반대"}],"bungs":[{"id":"ms77a8e6i7ohi","title":"쭈꾸미벙(현준)","date":"2026-07-31","attendees":["mprr85k9zvyq5","mpuhv7qprun80","mprr85k97bcw9","ms76sp3hrnz85","mpuhwiz4kowgs","ms76w6ryr7999","mprr85k9820a8","mprr85k94gglj"],"cancelled":[]},{"id":"ms778ncu0bphc","title":"주신당불금(준기)","date":"2026-07-24","attendees":["mprr85k97bcw9","mprr85k9k3qap","mprr85k9jw1fp","mprr85k9d2ojn","mprr85k97pba0","mprr85k94gglj","mprr85k9820a8","ms76v7pijvfqq","mprr85k9g1gna","mprr85k9zvyq5"],"cancelled":[]},{"id":"ms777v2oh3fl1","title":"쭈꾸미벙(도현)","date":"2026-07-21","attendees":["mqkfe0p7b5cwi","mprr85k9ouuiu","mpuhv7qprun80"],"cancelled":[]},{"id":"ms776jb2z9qlh","title":"불토 급벙","date":"2026-07-18","attendees":["mprr85k9k3qap","mprr85k94gglj","ms76sp3hrnz85","mprr85k9zvyq5","mprr85k97bcw9","mpuk0tuaf15ka","mpuhv7qprun80","mprr85k9g1gna","ms76tl9wdw13k","mprr85k9qbzma","mprr85k97yxve"],"cancelled":[]},{"id":"ms775jggq5h0k","title":"양꼬치벙","date":"2026-07-18","attendees":["mprr85k9ouuiu","ms76tl9wdw13k","mprr85k9ohy9p","mprr85k9qbzma","mprr85k9g1gna","mqced0c4c6ky0"],"cancelled":[]},{"id":"ms774o285auew","title":"팔당 카페벙(운영비x)","date":"2026-07-18","attendees":["mprr85k9g1gna","mprr85k94gglj","mprr85k9k3qap","mprr85k9zvyq5","ms76tl9wdw13k","mprr85k94035j"],"cancelled":[]},{"id":"ms773h1hdpj6k","title":"제헌절 전날불목벙","date":"2026-07-16","attendees":["mprr85k9k3qap","mprr85k9g1gna","mprr85k94gglj","mprr85k97bcw9","ms76sp3hrnz85","mprr85k9d2ojn","mprr85k9fxery","mprr85k9zvyq5","mprr85k9jw1fp","mqkk61x3vquoz"],"cancelled":[]},{"id":"ms771g9lkut8d","title":"아차산 등산벙","date":"2026-07-17","attendees":["mprr85k9ouuiu","mprr85k9g1gna","mprr85k9qbzma"],"cancelled":[]},{"id":"ms7701evv7xy1","title":"아미 첫벙","date":"2026-07-10","attendees":["mpuhv7qprun80","mprr85k97bcw9","mpuk0tuaf15ka","mprr85k9zvyq5"],"cancelled":[]},{"id":"ms76z9485dks5","title":"말벌기행 카페벙","date":"2026-07-10","attendees":["mprr85k95r9ih","mprr85k9g1gna","mprr85k9k3qap","mprr85k94gglj"],"cancelled":[]},{"id":"ms76o4uwmmbpe","title":"불목 문정번개벙","date":"2026-07-09","attendees":["mprr85k9k3qap","ms76sp3hrnz85","mprr85k9d2ojn","mprr85k97yxve","mprr85k9bdc5t"],"cancelled":[]},{"id":"mqyysiyyws396","title":"키크니 전시벙","date":"2026-07-25","attendees":["mprr85k9g1gna","mprr85k9k3qap","mprr85k9qbzma","mprr85k9ouuiu","ms76tl9wdw13k","mq3evwlyspu06","mprr85k94035j"],"cancelled":[]},{"id":"mqug6qwnu1pfq","title":"와인벙(굽돌집)","date":"2026-07-11","attendees":["mprr85k9ouuiu","mprr85k9g1gna","mprr85k97yxve","mprr85k9zvyq5","mprr85k97bcw9","mpuk0tuaf15ka","mprr85k97pba0","mprr85k94gglj","mprr85k9k3qap"],"cancelled":[]},{"id":"mqu8lsdf7e433","title":"방이 불토 낙지벙","date":"2026-06-27","attendees":["mprr85k9g1gna","mprr85k9d2ojn","mprr85k9jw1fp","mq3evwlyspu06","mprr85k97yxve","mprr85k94035j","mprr85k95r9ih","mprr85k9k3qap","mprr85k9ohy9p"],"cancelled":[]},{"id":"mqta22k13pprh","title":"불금 고기벙","date":"2026-06-26","attendees":["mprr85k9k3qap","mprr85k95r9ih","mprr85k9mcnt6","mprr85k94gglj","mprr85k9bdc5t"],"cancelled":["mprr85k9bdc5t"]},{"id":"mqs5bytn4o3qq","title":"문정 수욜 급벙","date":"2026-06-24","attendees":["mprr85k9k3qap","mprr85k9bdc5t","mprr85k97yxve"],"cancelled":[]},{"id":"mqovxfno5jpnx","title":"초복 삼계탕벙","date":"2026-07-11","attendees":["mprr85k9k3qap","mprr85k9zvyq5","mprr85k9bdc5t"],"cancelled":[]},{"id":"mqkffnp8grf10","title":"명구 카페급벙","date":"2026-06-17","attendees":["mprr85k9bdc5t","mprr85k9k3qap","mprr85k9fxery"],"cancelled":[]},{"id":"mqkfekm7otv7d","title":"고은첫벙","date":"2026-06-19","attendees":["mprr85k97pba0","mprr85k94gglj","mprr85k95r9ih","mprr85k9mcnt6","mprr85k9k3qap","mprr85k9bdc5t","mprr85k9g1gna","mqkfe0p7b5cwi","mqkk61x3vquoz"],"cancelled":[]},{"id":"mqg548z6np1r5","title":"청계산벙","date":"","attendees":[],"cancelled":[]},{"id":"mqg543env6836","title":"가락시장 대게벙","date":"2026-06-20","attendees":["mprr85k9ouuiu","mprr85k97yxve","mprr85k9g1gna","mprr85k97bcw9","mprr85k9jw1fp","mqced0c4c6ky0","mprr85k94gglj","mprr85k9vyvb6","mprr85k9bdc5t","mprr85k9zvyq5"],"cancelled":[]},{"id":"mqd89cv6t10lt","title":"준기첫벙","date":"2026-06-18","attendees":["mprr85k97bcw9","mprr85k9zvyq5","mprr85k9bdc5t","mpuhv7qprun80"],"cancelled":[]},{"id":"mq9a9qyjxb9yu","title":"문정 삼겹살벙","date":"2026-06-12","attendees":["mprr85k9g1gna","mprr85k9k3qap","mprr85k9bdc5t","mprr85k9d2ojn","mprr85k94gglj","mprr85k9zvyq5","mprr85k97bcw9","mprr85k95r9ih","mprr85k9jw1fp","mq3exf7snce45","mpuhv7qprun80"],"cancelled":[]},{"id":"mq8z9jb03eycr","title":"팔레트정모","date":"2026-07-04","attendees":["mprr85k9g1gna","mprr85k97yxve","mprr85k9zvyq5","mprr85k9ouuiu","mprr85k97bcw9","mpuhv7qprun80","mprr85k9k3qap","mprr85k9qbzma","mpuk0tuaf15ka","mprr85k94gglj","mprr85k9ohy9p","mprr85k9fxery","mprr85k97pba0","mprr85k9bdc5t","mqced0c4c6ky0","mprr85k95r9ih","mqkk61x3vquoz"],"cancelled":[]},{"id":"mq6i4lkcsw2ie","title":"명구첫벙","date":"2026-06-09","attendees":["mprr85k9bdc5t","mprr85k9k3qap","mprr85k9fxery"],"cancelled":[]},{"id":"mq58n5sbmwiwq","title":"남양주 논알콜벙","date":"2026-06-14","attendees":["mprr85k9k3qap","mprr85k9g1gna","mprr85k9bdc5t","mprr85k9uek9p","mqced0c4c6ky0","mprr85k9zvyq5"],"cancelled":["mprr85k9uek9p"]},{"id":"mq3f7n0idr5s1","title":"카페투벙","date":"2026-06-07","attendees":["mprr85k9g1gna","mprr85k95r9ih","mprr85k94035j"],"cancelled":[]},{"id":"mq3f5y279iabx","title":"방먹 금회번개","date":"2026-06-05","attendees":["mprr85k9ouuiu","mprr85k9g1gna","mprr85k9k3qap","mprr85k9bdc5t","mprr85k9fxery","mpuhwiz4kowgs","mprr85k9ohy9p","mprr85k9820a8"],"cancelled":[]},{"id":"mq3f2kui8wg5x","title":"군체영화벙","date":"2026-06-07","attendees":["mprr85k9g1gna","mprr85k94035j","mprr85k9qbzma","mprr85k9d2ojn","mprr85k9zvyq5","mprr85k9jw1fp"],"cancelled":[]},{"id":"mpui0tkymisdk","title":"올공 논알콜벙","date":"2026-06-13","attendees":["mprr85k9ouuiu","mprr85k9qbzma","mpuk0tuaf15ka","mprr85k9g1gna"],"cancelled":[]},{"id":"mpuhz8o5ficvl","title":"문정 불토벙","date":"2026-06-06","attendees":["mprr85k97yxve","mprr85k9zvyq5","mprr85k97bcw9","mprr85k9k3qap","mprr85k94gglj","mprr85k97pba0","mprr85k9d2ojn","mprr85k9uek9p","mprr85k9jw1fp","mpuhv7qprun80","mq3exf7snce45","mq3ey9v4oss5x","mq3ez9oei9moy","mprr85k9bdc5t"],"cancelled":["mq3exf7snce45"]},{"id":"mprry2fy3jemx","title":"방먹 간술포차벙","date":"2026-06-02","attendees":["mprr85k9ouuiu","mprr85k9g1gna","mprr85k94035j","mprr85k9uek9p","mprr85k9qbzma","mq3evwlyspu06"],"cancelled":[]},{"id":"mpuhxwz8v7nw0","title":"5월막벙","date":"2026-05-30","attendees":["mprr85k97yxve","mprr85k9g1gna","mprr85k9k3qap","mprr85k9bdc5t","mprr85k9fxery"],"cancelled":[]},{"id":"mprr85ka5oed1","title":"첫벙","date":"2026-05-09","attendees":["mprr85k9g1gna","mprr85k97yxve","mprr85k9zvyq5","mprr85k9ouuiu","mprr85k97bcw9","mprr85kav2um8","mprr85k9eq9jm","mprr85k9agquc","mprr85k95u3zt","mprr85k9mcnt6","mprr85k9k3qap"],"cancelled":[]},{"id":"mprr85ka68ta7","title":"야구벙v1","date":"2026-05-14","attendees":["mprr85k9ouuiu","mprr85k9ohy9p"],"cancelled":[]},{"id":"mprr85kafrso9","title":"굽돌벙","date":"2026-05-15","attendees":["mprr85k9g1gna","mprr85k95u3zt","mprr85k9ohy9p","mprr85k94035j","mprr85k95r9ih","mprr85k9bdc5t"],"cancelled":[]},{"id":"mprr85kadh5vp","title":"냉삼벙","date":"2026-05-16","attendees":["mprr85k9g1gna","mprr85k97yxve","mprr85k9zvyq5","mprr85k9ouuiu","mprr85k95u3zt","mprr85k9k3qap","mprr85k9bdc5t"],"cancelled":[]},{"id":"mprr85ka7s6qp","title":"쭈꾸미벙","date":"2026-05-19","attendees":["mprr85k9bdc5t","mprr85k9g1gna","mprr85k94035j","mprr85k9pmdc9"],"cancelled":[]},{"id":"mprr85ka38dru","title":"족발벙","date":"2026-05-22","attendees":["mprr85k9k3qap","mprr85k9bdc5t","mprr85k9g1gna","mprr85kahq3ub","mprr85k9fxery"],"cancelled":[]},{"id":"mprr85kat5ya3","title":"영화벙","date":"2026-05-23","attendees":["mprr85kav2um8","mprr85k9ouuiu","mprr85k97pba0","mprr85k94gglj","mprr85k9bdc5t","mprr85k9k3qap","mprr85k9zvyq5","mprr85k97yxve","mprr85k9vyvb6","mprr85k9g1gna"],"cancelled":[]},{"id":"mprr85kahwxjd","title":"송리단길벙","date":"2026-05-24","attendees":["mprr85k9g1gna","mprr85k94035j","mprr85k9d2ojn","mprr85k9uek9p","mprr85k9qbzma","mprr85k9k3qap"],"cancelled":[]},{"id":"mprr85kaf9t6x","title":"번개벙","date":"2026-05-28","attendees":["mprr85k9g1gna","mprr85k94035j","mprr85k9mcnt6","mprr85k9c9t2l","mprr85k9jw1fp","mprr85k9bdc5t","mprr85k97yxve","mprr85k9fxery","mprr85k9pmdc9"],"cancelled":[]},{"id":"mprr85kan8xrp","title":"천호벙","date":"2026-05-29","attendees":["mprr85k95r9ih","mprr85k9g1gna","mprr85k9zvyq5","mprr85k9k3qap","mprr85k9mcnt6"],"cancelled":["mprr85k9mcnt6"]}],"warnings":[{"id":"mprr85kaywcls","name":"배하림","date":"2026-05-24","type":"경고","reason":"욕설(성민·명구·현준)","memberId":"mprr85kav2um8"},{"id":"mprr85ka9mrnn","name":"이승현","date":"2026-05-24","type":"경고","reason":"선넘는 말·행동","memberId":"mprr85k94gglj"},{"id":"mqolcupnl9i89","name":"강명구","date":"2026-06-20","type":"경고","reason":"벙 늦참해서 아침까지 늘어짐 / 여자에게 하는행태(한명만걸려라)_동욱","memberId":"mprr85k9bdc5t"},{"id":"mqtml142l7at6","name":"강명구","date":"2026-06-25","type":"경고","reason":"무례함 누적_정산 영수증 띡, 뒷말 전달 누적","memberId":"mprr85k9bdc5t"}],"settlements":{"mqkfekm7otv7d":[{"id":"mqljzi7mnwysk","savedAt":"2026-06-19T23:24:49.930Z","bungTitle":"고은첫벙","bungDate":"2026-06-19","host":"박고은","acct":"하나은행 376-910175-69407 박고은","moimOn":true,"bjOn":true,"noBj":false,"members":[{"name":"박고은","prepay":0,"note":""},{"name":"이승현","prepay":0,"note":""},{"name":"전해성","prepay":0,"note":"1차 논알콜"},{"name":"김진연","prepay":0,"note":""},{"name":"이승민","prepay":0,"note":""},{"name":"강명구","prepay":0,"note":"2차 11시참석"},{"name":"김성민","prepay":0,"note":"1,2차 논알콜"},{"name":"김도현","prepay":30000,"note":""},{"name":"이연호","prepay":30000,"note":""}],"costs":[{"label":"1차","place":"일월의밤","total":133100,"liquor":51500,"drink":6000},{"label":"2차","place":"고구려","total":155500,"liquor":69500,"drink":3000},{"label":"3차","place":"7번방","total":108700,"liquor":0,"drink":0}],"opts":{"0":{"2":{"late":0.4}},"1":{"0":{"late":-0.5},"2":{"late":-0.4}},"2":{"0":{"nalcohol":true,"late":0},"1":{"exempt":true},"2":{"exempt":true,"late":0}},"3":{"2":{"late":0,"nalcohol":true}},"5":{"0":{"exempt":true},"1":{"nalcohol":false,"late":10351}},"6":{"0":{"nalcohol":true,"late":0.5},"1":{"nalcohol":true},"2":{"exempt":true}},"7":{"2":{"exempt":true}},"8":{"0":{"exempt":true},"1":{"nalcohol":false},"2":{"late":0}}},"manualTotal":{}}],"mqg543env6836":[{"id":"mqmktfq5jnx5j","savedAt":"2026-06-20T16:51:06.532Z","bungTitle":"가락시장 대게벙","bungDate":"2026-06-20","host":"이세지","acct":"토스뱅크 100010605868 이세지","moimOn":true,"bjOn":true,"noBj":false,"members":[{"name":"이세지","prepay":0,"note":""},{"name":"김동욱","prepay":0,"note":""},{"name":"김성민","prepay":0,"note":"1차 논알콜"},{"name":"정준기","prepay":0,"note":""},{"name":"류서연","prepay":0,"note":""},{"name":"박현철","prepay":0,"note":"논알콜"},{"name":"이승현","prepay":0,"note":""},{"name":"박소진","prepay":0,"note":""},{"name":"강명구","prepay":0,"note":"늦참,물마심"},{"name":"이현준","prepay":0,"note":""}],"costs":[{"label":"1차","place":"향기수산","total":330000,"liquor":0,"drink":0},{"label":"1차","place":"다미정","total":138000,"liquor":36000,"drink":8000},{"label":"2차","place":"리얼펍가락","total":171100,"liquor":102600,"drink":6000}],"opts":{"0":{"1":{"exempt":false},"2":{"late":0}},"2":{"0":{"nalcohol":false},"1":{"nalcohol":true},"2":{"late":0}},"3":{"2":{"late":0}},"4":{"2":{"late":1}},"5":{"0":{"nalcohol":false},"1":{"nalcohol":true},"2":{"nalcohol":true,"late":-4}},"6":{"2":{"late":1}},"7":{"0":{"exempt":true},"1":{"exempt":true},"2":{"late":1}},"8":{"0":{"exempt":true},"1":{"exempt":true},"2":{"exempt":true,"late":0}},"9":{"0":{"exempt":true},"1":{"exempt":true},"2":{"late":1}}},"manualTotal":{}},{"id":"mqmlimgyo1tut","savedAt":"2026-06-21T07:15:47.939Z","bungTitle":"가락시장 대게벙","bungDate":"2026-06-20","host":"이세지","acct":"신한 110-315-001521 김동욱","moimOn":false,"bjOn":false,"noBj":false,"members":[{"name":"김동욱","prepay":0,"note":""},{"name":"김성민","prepay":0,"note":""},{"name":"정준기","prepay":0,"note":""},{"name":"류서연","prepay":0,"note":""},{"name":"박현철","prepay":0,"note":"3차 논알콜"},{"name":"이승현","prepay":0,"note":""},{"name":"박소진","prepay":0,"note":""},{"name":"강명구","prepay":0,"note":""},{"name":"이현준","prepay":0,"note":""}],"costs":[{"label":"3차","place":"명불허전","total":179000,"liquor":94000,"drink":4000},{"label":"4차","place":"노래방","total":43000,"liquor":0,"drink":0}],"opts":{"0":{"0":{"late":0}},"4":{"0":{"nalcohol":true,"late":-2.5},"1":{"exempt":true}},"6":{"0":{"late":0.5},"1":{"exempt":true}},"7":{"0":{"late":1}},"8":{"0":{"late":1}}},"manualTotal":{}}]}};
 
 /* ══ STATE ══ */
-let S={members:[],archived:[],rejects:[],bungs:[],warnings:[],settlements:{}};
+const DEFAULT_PLACE_CATS=["회/해산물","고기","이자카야","양식","중식","한식","카페/디저트","술집/바","액티비티","기타"];
+let S={version:17,members:[],archived:[],rejects:[],bungs:[],warnings:[],settlements:{},places:[],placeCategories:[...DEFAULT_PLACE_CATS],staffMeetings:[],eventFeed:null};
+/* v16/v22 → v23(스키마 v17) 마이그레이션. 구버전 JSON 복원 시 신규 키가 없어 나는 오류를 막는다. */
+function migrateToV17(d){
+  if(!d||typeof d!=='object')return d;
+  d.version=17;
+  if(!Array.isArray(d.places))d.places=[];
+  if(!Array.isArray(d.placeCategories)||!d.placeCategories.length)d.placeCategories=[...DEFAULT_PLACE_CATS];
+  if(!Array.isArray(d.staffMeetings))d.staffMeetings=[];
+  if(d.eventFeed===undefined)d.eventFeed=null;
+  d.bungs=(d.bungs||[]).map(b=>{
+    if(!b)return b;
+    if(!b.placeIds||typeof b.placeIds!=='object')b.placeIds={round1:null,round2:null};
+    if(b.placeIds.round1===undefined)b.placeIds.round1=null;
+    if(b.placeIds.round2===undefined)b.placeIds.round2=null;
+    if(b.sourceEventId===undefined)b.sourceEventId=null;
+    return b;
+  });
+  return d;
+}
+function migP(p){if(!p)return null;p.id=p.id||uid();p.name=p.name||'(이름없음)';p.region=p.region||'';p.categories=Array.isArray(p.categories)?p.categories:[];p.rounds=Array.isArray(p.rounds)&&p.rounds.length?p.rounds:['1차'];p.naverUrl=p.naverUrl||'';p.memo=p.memo||'';p.capacity=(p.capacity===0||p.capacity)?p.capacity:null;p.priceRange=p.priceRange||'';p.status=p.status||'활성';p.createdAt=p.createdAt||'';p.createdBy=p.createdBy||'';return p;}
 function migM(m){if(!m)return null;m.id=m.id||uid();m.name=m.name||'(이름없음)';m.status=m.status||'active';m.note=m.note||'';m.gender=m.gender||'';m.mbti=m.mbti||'';m.role=m.role||'일반';m.grade=m.grade||'일반';m.region=m.region||'';m.height=m.height||'';m.birth=m.birth||'';m.joindate=m.joindate||'';if(!m.birthYear||m.birthYear<1900)m.birthYear=(m.age&&+m.age>0)?2026-+m.age+1:null;m.age=m.birthYear?2026-+m.birthYear+1:(+m.age||null);return m;}
-function migB(b){if(!b)return null;b.id=b.id||uid();b.title=b.title||'(제목없음)';b.date=b.date||'';b.attendees=Array.isArray(b.attendees)?b.attendees:[];b.cancelled=Array.isArray(b.cancelled)?b.cancelled:[];return b;}
-function applyData(raw){S.members=(raw.members||[]).map(migM).filter(Boolean);S.archived=(raw.archived||[]).map(migM).filter(Boolean);S.rejects=raw.rejects||[];S.bungs=(raw.bungs||[]).map(migB).filter(Boolean);S.warnings=(raw.warnings||[]).filter(w=>w.type!=='노쇼');S.settlements=raw.settlements||{};window._S=S;}
+function migB(b){if(!b)return null;b.id=b.id||uid();b.title=b.title||'(제목없음)';b.date=b.date||'';b.attendees=Array.isArray(b.attendees)?b.attendees:[];b.cancelled=Array.isArray(b.cancelled)?b.cancelled:[];if(!b.placeIds||typeof b.placeIds!=='object')b.placeIds={round1:null,round2:null};if(b.placeIds.round1===undefined)b.placeIds.round1=null;if(b.placeIds.round2===undefined)b.placeIds.round2=null;if(b.sourceEventId===undefined)b.sourceEventId=null;return b;}
+function applyData(raw){raw=migrateToV17(raw||{});S.version=17;S.members=(raw.members||[]).map(migM).filter(Boolean);S.archived=(raw.archived||[]).map(migM).filter(Boolean);S.rejects=raw.rejects||[];S.bungs=(raw.bungs||[]).map(migB).filter(Boolean);S.warnings=(raw.warnings||[]).filter(w=>w.type!=='노쇼');S.settlements=raw.settlements||{};S.places=(raw.places||[]).map(migP).filter(Boolean);S.placeCategories=(Array.isArray(raw.placeCategories)&&raw.placeCategories.length)?raw.placeCategories.slice():[...DEFAULT_PLACE_CATS];S.staffMeetings=raw.staffMeetings||[];S.eventFeed=window._eventFeed||raw.eventFeed||null;window._S=S;}
 window._sync=d=>{applyData(d);renderAll();};
 
 async function loadData(){
@@ -803,9 +1096,12 @@ function copyEl(id){navigator.clipboard.writeText(document.getElementById(id).te
 function renderHistBox(panelId,memberId){const panel=document.getElementById(panelId);if(!panel)return;const p=resolve(memberId);if(!p){panel.style.display='none';return;}const myB=S.bungs.filter(b=>b.attendees.includes(p.id)).sort((a,b)=>b.date.localeCompare(a.date));const wCnt=(S.warnings||[]).filter(w=>w.memberId===p.id&&w.type==='경고').length;const nCnt=S.bungs.reduce((s,b)=>s+(b.cancelled.includes(p.id)?1:0),0);let html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;"><span style="font-weight:700;font-size:12px;">📋 '+esc(p.name)+' 번개 참석 이력</span><button class="btn bsub" style="padding:2px 8px;font-size:10px;" onclick="document.getElementById(\''+panelId+'\').style.display=\'none\'">✕</button></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;"><span class="pill pg">누적 '+myB.length+'회 참석</span>'+(wCnt?'<span class="pill" style="background:#fee2e2;color:#dc2626;">⚠️ 경고 '+wCnt+'건</span>':'')+(nCnt?'<span class="pill pr">🚷 노쇼 '+nCnt+'건</span>':'')+'</div><div style="max-height:150px;overflow-y:auto;">';if(myB.length){myB.forEach(b=>{html+='<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--bd);"><span class="db" style="font-size:10px;flex-shrink:0;">'+dBadge(b.date)+'</span><span style="flex:1;font-size:11px;">'+esc(b.title)+'</span><span style="font-size:10px;color:var(--mt);">'+esc(b.date)+'</span>'+(b.cancelled.includes(p.id)?'<span class="pill pr">취소</span>':'')+'</div>';});}else{html+='<p style="color:var(--mt);text-align:center;padding:8px;font-size:11px;">참석 이력 없음</p>';}html+='</div>';panel.innerHTML=html;panel.style.display='block';}
 
 /* ══ EXPORT/IMPORT ══ */
-function exportJSON(){const json=JSON.stringify(S,null,2);try{const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='palette_data.json';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),2000);}catch(e){prompt('JSON 복사:',json);}}
+function exportJSON(){const _out=Object.assign({},S,{version:17});delete _out.eventFeed;const json=JSON.stringify(_out,null,2);try{const blob=new Blob([json],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='palette_data.json';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),2000);}catch(e){prompt('JSON 복사:',json);}}
 function importJSON(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const p=JSON.parse(ev.target.result);if(!p||!Array.isArray(p.members))throw new Error('members 필드 없음');if(!confirm('⚠️ 현재 데이터를 불러온 파일 내용으로 덮어씁니다.\n(현재 데이터는 자동으로 백업된 뒤 교체됩니다)\n계속하시겠습니까?')){e.target.value='';return;}if(window._fbBackupSave)await window._fbBackupSave(S,'가져오기 전 자동 백업');applyData(p);await save();renderAll();alert('불러왔습니다!');}catch(err){alert('실패: '+err.message);}};r.readAsText(f);e.target.value='';}
-function exportExcel(){if(typeof XLSX==='undefined'){alert('XLSX 로드 실패');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(activeM().map(m=>({'이름':m.name,'성별':m.gender,'나이':(m.age||kr(m.birthYear)||'-')+'세','생년월일':m.birth||'-','키':m.height?m.height+'cm':'-','MBTI':m.mbti||'-','역할':m.role,'지역':m.region,'입회일':m.joindate,'가입기간':joinDays(m),'특이사항':m.note}))),'현재 회원');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.bungs.map(b=>{const aN=b.attendees.map(id=>{const p=resolve(id);return p?p.name:id;});const cN=b.cancelled.map(id=>{const p=resolve(id);return p?p.name:id;});const{m:gm,f:gf}=calcGR(b.attendees);return{'날짜':b.date,'제목':b.title,'참석수':b.attendees.length,'남/여':'남'+gm+'/여'+gf,'참석자':aN.join(', '),'취소':cN.join(', ')||'-'};})),'번개 이력');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet((S.rejects||[]).map(r=>({'이름':r.name,'성별':r.gender,'거절일':r.rejectDate,'사유':r.reason}))),'거절 리스트');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.archived.filter(m=>m.status==='kicked'||m.status==='left').map(m=>({'이름':m.name,'구분':m.status==='kicked'?'강퇴':'탈퇴','기간':m.period,'사유':m.reason}))),'강퇴탈퇴');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(getMergedW('ALL').map(w=>({'이름':w.name,'날짜':w.date,'유형':w.type,'사유':w.reason}))),'경고노쇼');XLSX.writeFile(wb,'팔레트_'+new Date().toISOString().slice(0,10)+'.xlsx');}
+function exportExcel(){if(typeof XLSX==='undefined'){alert('XLSX 로드 실패');return;}const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(activeM().map(m=>({'이름':m.name,'성별':m.gender,'나이':(m.age||kr(m.birthYear)||'-')+'세','생년월일':m.birth||'-','키':m.height?m.height+'cm':'-','MBTI':m.mbti||'-','역할':m.role,'지역':m.region,'입회일':m.joindate,'가입기간':joinDays(m),'특이사항':m.note}))),'현재 회원');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.bungs.map(b=>{const aN=b.attendees.map(id=>{const p=resolve(id);return p?p.name:id;});const cN=b.cancelled.map(id=>{const p=resolve(id);return p?p.name:id;});const{m:gm,f:gf}=calcGR(b.attendees);return{'날짜':b.date,'제목':b.title,'참석수':b.attendees.length,'남/여':'남'+gm+'/여'+gf,'참석자':aN.join(', '),'취소':cN.join(', ')||'-'};})),'번개 이력');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet((S.rejects||[]).map(r=>({'이름':r.name,'성별':r.gender,'거절일':r.rejectDate,'사유':r.reason}))),'거절 리스트');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.archived.filter(m=>m.status==='kicked'||m.status==='left').map(m=>({'이름':m.name,'구분':m.status==='kicked'?'강퇴':'탈퇴','기간':m.period,'사유':m.reason}))),'강퇴탈퇴');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(getMergedW('ALL').map(w=>({'이름':w.name,'날짜':w.date,'유형':w.type,'사유':w.reason}))),'경고노쇼');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet((S.places||[]).map(p=>{const d=plcDerive(p);return{'이름':p.name,'지역':p.region,'카테고리':(p.categories||[]).join(', '),'차수':(p.rounds||[]).join('·'),'수용인원':p.capacity??'-','가격대':p.priceRange||'-','상태':p.status,'사용횟수':d.useCount,'최근방문일':d.lastUsedAt||'-','네이버링크':p.naverUrl||'-','메모':p.memo||''};})),'장소');
+const _stfRows=[];(S.staffMeetings||[]).slice().sort((a,b)=>a.yearMonth.localeCompare(b.yearMonth)).forEach(r=>{const m=r.metrics||{};_stfRows.push({'연월':r.yearMonth,'지표기준월':r.metricsOf||'','번개수':m.meetupCount??'','참석연인원':m.attendeeTotal??'','평균참석률(%)':m.avgAttendanceRate??'','신규':m.newMembers??'','탈퇴강퇴':m.leftMembers??'','경고':m.warnings??'','당일취소':m.noShows??'','남':m.genderRatio?.m??'','여':m.genderRatio?.f??'','무참석':m.zeroAttendCount??'','30일미참석':m.dormant30Count??'','정산총액':m.settlementTotal??'','잘된점':r.good||'','아쉬운점':r.bad||'','이슈':(r.issues||[]).map(x=>x.text).filter(Boolean).join(' / '),'결정사항':(r.decisions||[]).filter(Boolean).join(' / '),'액션아이템':(r.actions||[]).filter(a=>a.text).map(a=>a.text+'('+(a.owner||'미정')+'·'+(a.due||'-')+'·'+(a.status||'대기')+')').join(' / '),'확정':r.locked?'Y':'N'});});
+XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(_stfRows.length?_stfRows:[{'연월':'(회의록 없음)'}]),'운영진회의록');
+XLSX.writeFile(wb,'팔레트_'+new Date().toISOString().slice(0,10)+'.xlsx');}
 
 /* ══ REJECT ══ */
 function toggleRjMemo(){document.getElementById('rjm').style.display=document.getElementById('rjr').value==='기타'?'block':'none';}
@@ -971,9 +1267,21 @@ async function deleteWarning(wId){
 
 /* ══ BUNGS ══ */
 function buildBungMonFilter(){const sel=document.getElementById('bMF');if(!sel)return;const keys=allMK();const cur=sel.value||(keys.length?keys[keys.length-1]:'');sel.innerHTML='<option value="">전체 누적</option>'+keys.map(k=>'<option value="'+k+'"'+(k===cur?' selected':'')+'>'+mkLbl(k)+'</option>').join('');}
-async function addBung(){const t=(document.getElementById('bt').value||'').trim();if(!t){alert('벙 제목 입력');return;}S.bungs.unshift({id:uid(),title:t,date:document.getElementById('bdt').value||'',attendees:[],cancelled:[]});await save();renderBungs();safe(buildAllSels);document.getElementById('bt').value='';document.getElementById('bdt').value='';}
+async function addBung(){
+  const t=(document.getElementById('bt').value||'').trim();
+  if(!t){alert('벙 제목을 입력하세요.');return;}
+  const p1=document.getElementById('bp1').value||null, p2=document.getElementById('bp2').value||null;
+  S.bungs.unshift({id:uid(),title:t,date:document.getElementById('bdt').value||'',attendees:[],cancelled:[],placeIds:{round1:p1,round2:p2},sourceEventId:_pendingEventId||null});
+  _pendingEventId=null;
+  await save();
+  document.getElementById('bt').value='';document.getElementById('bdt').value='';
+  document.getElementById('bp1').value='';document.getElementById('bp2').value='';
+  COURSE.round1=null;COURSE.round2=null;safe(renderSlots);
+  const hint=document.getElementById('bCourseHint');if(hint)hint.style.display='none';
+  renderBungs();safe(buildAllSels);safe(renderPlaces);
+}
 function runBSearch(){const q=(document.getElementById('bSrch').value||'').trim();const panel=document.getElementById('bHistBox');if(!q){panel.style.display='none';return;}const ql=q.toLowerCase();const hit=activeM().find(m=>(m.name||'').toLowerCase()===ql)||activeM().find(m=>(m.name||'').toLowerCase().includes(ql));if(!hit){panel.innerHTML='<p style="color:var(--mt);font-size:11px;">결과 없음</p>';panel.style.display='block';return;}renderHistBox('bHistBox',hit.id);}
-function renderBungs(){const container=document.getElementById('bList');const empty=document.getElementById('bEmpty');const mK=document.getElementById('bMF').value||'';let sorted=[...S.bungs].sort((a,b)=>b.date.localeCompare(a.date));if(mK)sorted=sorted.filter(b=>dtKey(b.date)===mK);if(_upF)sorted=sorted.filter(isUp);const cnt=document.getElementById('bCnt');if(cnt)cnt.textContent='(총 '+S.bungs.length+'개)';if(!sorted.length){if(container)container.innerHTML='';if(empty)empty.style.display='block';return;}if(empty)empty.style.display='none';if(!container)return;const act=activeM();container.innerHTML=sorted.map(b=>{const badge=dBadge(b.date);const upc=isUp(b);const realAtt=b.attendees.filter(id=>!b.cancelled.includes(id));const{m:gm,f:gf}=calcGR(realAtt);const chips=b.attendees.map(aid=>{const p=resolve(aid);if(!p)return'';const cx=b.cancelled.includes(aid);return'<span class="chip'+(cx?' chip-cx':'')+'"><input type="checkbox" '+(cx?'checked':'')+' onchange="safe(toggleCx,\''+esc(b.id)+'\',\''+esc(aid)+'\',this.checked)" style="width:11px;height:11px;cursor:pointer;flex-shrink:0;accent-color:var(--pri);">'+'<span onclick="safe(renderHistBox,\'bHistBox\',\''+esc(aid)+'\')" style="cursor:pointer;text-decoration:underline dotted;">'+esc(p.name)+'</span>'+'<span onclick="safe(removeAtt,\''+esc(b.id)+'\',\''+esc(aid)+'\')" style="cursor:pointer;opacity:.55;font-size:10px;">✕</span></span>';}).join('');const addBtns=act.filter(m=>!b.attendees.includes(m.id)).map(m=>'<span onclick="safe(addAtt,\''+esc(b.id)+'\',\''+esc(m.id)+'\')" style="display:inline-block;background:#f0fdf4;border-radius:99px;padding:1px 7px;font-size:11px;cursor:pointer;margin:1px;color:var(--sb);border:1px solid var(--bd);" onmouseover="this.style.background=\'var(--pl)\';this.style.color=\'var(--pri)\'" onmouseout="this.style.background=\'#f0fdf4\';this.style.color=\'var(--sb)\'">'+esc(m.name)+'</span>').join('');return'<div class="bc '+(upc?'bcup':'')+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:7px;flex-wrap:wrap;"><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">'+(badge?'<span class="db">'+esc(badge)+'</span>':'')+(upc?'<span class="pill pgold">📅예정</span>':'')+'<span style="font-weight:700;font-size:13px;">'+esc(b.title)+'</span><span style="color:var(--mt);font-size:11px;">'+(esc(b.date)||'날짜미정')+'</span>'+'<span class="pill pg">'+realAtt.length+'명·남'+gm+'/여'+gf+'</span>'+(b.cancelled.length?'<span class="pill pr">'+b.cancelled.length+'명취소</span>':'')+'</div><div style="display:flex;gap:5px;"><button class="btn" style="background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd;font-size:11px;padding:3px 9px;" onclick="safe(openSettlement,\''+esc(b.id)+'\')">💰 정산</button><button class="btn bsub" style="font-size:11px;padding:3px 8px;" onclick="safe(editBungTitle,\''+esc(b.id)+'\')">✏️ 수정</button><button class="btn bred" onclick="safe(delBung,\''+esc(b.id)+'\')">🗑 삭제</button></div></div><div style="background:#fff;border-radius:8px;padding:5px 8px;min-height:26px;margin-bottom:6px;border:1px solid var(--bd);"><span style="font-size:10px;color:var(--mt);margin-right:4px;">참석자</span>'+(chips||'<span style="color:var(--mt);font-size:11px;">없음</span>')+'</div><div><span style="font-size:10px;color:var(--mt);margin-right:4px;">추가</span>'+(addBtns||'<span style="color:var(--mt);font-size:11px;">모두 참석 중</span>')+'</div></div>';}).join('');}
+function renderBungsCore(){const container=document.getElementById('bList');const empty=document.getElementById('bEmpty');const mK=document.getElementById('bMF').value||'';let sorted=[...S.bungs].sort((a,b)=>b.date.localeCompare(a.date));if(mK)sorted=sorted.filter(b=>dtKey(b.date)===mK);if(_upF)sorted=sorted.filter(isUp);const _bq=(document.getElementById('bListSrch')?.value||'').trim().toLowerCase();if(_bq)sorted=sorted.filter(b=>(b.title||'').toLowerCase().includes(_bq));const cnt=document.getElementById('bCnt');if(cnt)cnt.textContent='표시 '+sorted.length+'건 / 총 '+S.bungs.length+'건';if(!sorted.length){if(container)container.innerHTML='';if(empty)empty.style.display='block';return;}if(empty)empty.style.display='none';if(!container)return;const act=activeM();container.innerHTML=sorted.map(b=>{const badge=dBadge(b.date);const upc=isUp(b);const realAtt=b.attendees.filter(id=>!b.cancelled.includes(id));const{m:gm,f:gf}=calcGR(realAtt);const chips=b.attendees.map(aid=>{const p=resolve(aid);if(!p)return'';const cx=b.cancelled.includes(aid);return'<span class="chip'+(cx?' chip-cx':'')+'">'+(_isAdmin?'<input type="checkbox" '+(cx?'checked':'')+' onchange="safe(toggleCx,\''+esc(b.id)+'\',\''+esc(aid)+'\',this.checked)" style="width:11px;height:11px;cursor:pointer;flex-shrink:0;accent-color:var(--pri);">':(cx?'<span style="font-size:9px;">✖</span>':''))+'<span onclick="safe(renderHistBox,\'bHistBox\',\''+esc(aid)+'\')" style="cursor:pointer;text-decoration:underline dotted;">'+esc(p.name)+'</span>'+(_isAdmin?'<span onclick="safe(removeAtt,\''+esc(b.id)+'\',\''+esc(aid)+'\')" style="cursor:pointer;opacity:.55;font-size:10px;">✕</span>':'')+'</span>';}).join('');const addBtns=(!_isAdmin?[]:act.filter(m=>!b.attendees.includes(m.id))).map(m=>'<span onclick="safe(addAtt,\''+esc(b.id)+'\',\''+esc(m.id)+'\')" style="display:inline-block;background:#f0fdf4;border-radius:99px;padding:1px 7px;font-size:11px;cursor:pointer;margin:1px;color:var(--sb);border:1px solid var(--bd);" onmouseover="this.style.background=\'var(--pl)\';this.style.color=\'var(--pri)\'" onmouseout="this.style.background=\'#f0fdf4\';this.style.color=\'var(--sb)\'">'+esc(m.name)+'</span>').join('');const _pn=['round1','round2'].map(k=>{const pid=b.placeIds&&b.placeIds[k];const p=pid?(S.places||[]).find(x=>x.id===pid):null;return p?(k==='round1'?'1차 ':'2차 ')+p.name:'';}).filter(Boolean).join(' → ');return'<div class="bc '+(upc?'bcup':'')+'" data-bid="'+esc(b.id)+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:7px;flex-wrap:wrap;"><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">'+(badge?'<span class="db">'+esc(badge)+'</span>':'')+(upc?'<span class="pill pgold">📅예정</span>':'')+'<span style="font-weight:700;font-size:13px;">'+esc(b.title)+'</span><span style="color:var(--mt);font-size:11px;">'+(esc(b.date)||'날짜미정')+'</span>'+(_pn?'<span class="pill" style="background:#eef2ff;color:#4338ca;">🗺️ '+esc(_pn)+'</span>':'')+'<span class="pill pg">'+realAtt.length+'명·남'+gm+'/여'+gf+'</span>'+(b.cancelled.length?'<span class="pill pr">'+b.cancelled.length+'명취소</span>':'')+'</div>'+(_isAdmin?'<div style="display:flex;gap:5px;"><button class="btn" style="background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd;font-size:11px;padding:3px 9px;" onclick="safe(openSettlement,\''+esc(b.id)+'\')">💰 정산</button><button class="btn bsub" style="font-size:11px;padding:3px 8px;" onclick="safe(editBungTitle,\''+esc(b.id)+'\')">✏️ 수정</button><button class="btn bred" onclick="safe(delBung,\''+esc(b.id)+'\')">🗑 삭제</button></div>':'')+'</div><div style="background:#fff;border-radius:8px;padding:5px 8px;min-height:26px;margin-bottom:6px;border:1px solid var(--bd);"><span style="font-size:10px;color:var(--mt);margin-right:4px;">참석자</span>'+(chips||'<span style="color:var(--mt);font-size:11px;">없음</span>')+'</div>'+(_isAdmin?'<div><span style="font-size:10px;color:var(--mt);margin-right:4px;">추가</span>'+(addBtns||'<span style="color:var(--mt);font-size:11px;">모두 참석 중</span>')+'</div>':'')+'</div>';}).join('');}
 async function editBungTitle(bId){const b=S.bungs.find(x=>x.id===bId);if(!b)return;const t=prompt('번개 제목:',b.title);if(t===null)return;const tr=t.trim();if(!tr){alert('제목 입력');return;}b.title=tr;await save();renderBungs();}
 async function addAtt(bId,mId){const b=S.bungs.find(x=>x.id===bId);if(b&&!b.attendees.includes(mId)){b.attendees.push(mId);await save();renderBungs();if(_tab===3)safe(syncDashAll);else if(_tab===4)safe(renderArchived);}}
 async function removeAtt(bId,mId){const b=S.bungs.find(x=>x.id===bId);if(!b)return;b.attendees=b.attendees.filter(x=>x!==mId);b.cancelled=b.cancelled.filter(x=>x!==mId);await save();renderBungs();if(_tab===3)safe(syncDashAll);else if(_tab===4)safe(renderArchived);}
@@ -1399,14 +1707,546 @@ function renderArchived(k){
   const allRj=S.rejects||[];let filtRj=key==='ALL'?allRj:allRj.filter(r=>r.rejectDate&&dtKey(r.rejectDate)===key);const rjq=(document.getElementById('rjSrch')?.value||'').trim().toLowerCase();if(rjq)filtRj=filtRj.filter(r=>(r.name||'').toLowerCase().includes(rjq));const rjM=filtRj.filter(r=>r.gender==='남').length,rjF=filtRj.filter(r=>r.gender==='여').length;const rjCt=document.getElementById('rjCt');if(rjCt){let txt=key==='ALL'?'(전체 '+allRj.length+'건':'(전체 '+allRj.length+'건 / 이 달 '+filtRj.length+'건';if(rjq)txt+=' · 검색 '+filtRj.length+'건';if(filtRj.length>0)txt+=' · 남'+rjM+'/여'+rjF;txt+=')';rjCt.textContent=txt;}document.getElementById('rjB').innerHTML=filtRj.length?filtRj.map(r=>'<tr><td><strong>'+esc(r.name)+'</strong></td><td><span class="pill '+(r.gender==='남'?'pt':'pr')+'">'+esc(r.gender||'-')+'</span></td><td style="font-size:10px;">'+esc(r.rejectDate||'-')+'</td><td style="font-size:10px;color:var(--sb);">'+esc(r.reason||'-')+'</td>'+(_isAdmin?'<td><button class="btn bred" style="padding:2px 7px;font-size:10px;" onclick="safe(deleteReject,\''+esc(r.id)+'\')">🗑</button></td>':'')+'</tr>').join(''):'<tr><td colspan="'+(_isAdmin?5:4)+'" style="text-align:center;color:var(--mt);padding:8px;">'+(key==='ALL'?(rjq?'검색 결과 없음':'없음'):'이 기간 거절 없음')+'</td></tr>';const allKv=S.archived.filter(m=>m.status==='kicked'||m.status==='left');const filtKv=key==='ALL'?allKv:allKv.filter(m=>{const ex=m.exitDate||'';if(!ex)return false;const p=ex.split('/');if(p.length>=2){const n=p[0]+'-'+String(p[1]).padStart(2,'0');return n===key;}return false;});const kvCt=document.getElementById('kvCt');if(kvCt)kvCt.textContent='('+filtKv.length+'건)';document.getElementById('kvB').innerHTML=filtKv.length?filtKv.map(m=>'<tr><td><strong>'+esc(m.name)+'</strong></td><td><span class="pill '+(m.status==='kicked'?'pamb':'pgy')+'">'+(m.status==='kicked'?'강퇴':'탈퇴')+'</span></td><td style="font-size:10px;">'+esc(m.period||'-')+'</td><td style="font-size:10px;color:var(--sb);">'+esc(m.reason||m.note||'-')+'</td>'+(_isAdmin?'<td style="white-space:nowrap;"><button class="btn bsub" style="padding:2px 6px;font-size:10px;" onclick="fixExitDate(\''+esc(m.id)+'\')" title="날짜/사유 수정">🛠</button> <button class="btn bred" style="padding:2px 6px;font-size:10px;" onclick="deleteArchived(\''+esc(m.id)+'\')" title="기록 삭제">🗑</button></td>':'')+'</tr>').join(''):'<tr><td colspan="'+(_isAdmin?5:4)+'" style="text-align:center;color:var(--mt);padding:8px;">'+(key==='ALL'?'없음':'이 기간 강퇴·탈퇴 없음')+'</td></tr>';
 }
 
-function renderDash(){safe(buildAllSels);safe(updateOpDays);if(!GF.all){const lk=latestK();if(lk&&!document.getElementById('dY').value){const[y,m]=lk.split('-');document.getElementById('dY').value=y;document.getElementById('dM').value=m;}}safe(syncDashAll);}
+function renderDash(){safe(buildAllSels);safe(updateOpDays);safe(renderTrendChart);safe(renderDowChart);if(!GF.all){const lk=latestK();if(lk&&!document.getElementById('dY').value){const[y,m]=lk.split('-');document.getElementById('dY').value=y;document.getElementById('dM').value=m;}}safe(syncDashAll);}
 function renderTab4(){safe(buildAllSels);if(!GF.all){const lk=latestK();if(lk&&!document.getElementById('dY').value){const[y,m]=lk.split('-');document.getElementById('dY').value=y;document.getElementById('dM').value=m;}}const fLbl=document.getElementById('fLbl');if(fLbl)fLbl.textContent='📌 '+GF.label();safe(renderArchived);}
 function openReport(){const key=GF.key();const lbl=GF.label();const act=activeM();const fb=getBungsGF();const nm=key==='ALL'?[]:act.filter(m=>m.joindate&&dtKey(m.joindate)===key);const cMap={};fb.forEach(b=>b.attendees.forEach(id=>{const p=resolve(id);if(p&&p.status==='active')cMap[p.name]=(cMap[p.name]||0)+1;}));const top=Object.entries(cMap).sort((a,b)=>b[1]-a[1])[0];const noshows=deriveNoshows(key);const warns=(S.warnings||[]).filter(w=>key==='ALL'||(w.date&&dtKey(w.date)===key));const males=act.filter(m=>m.gender==='남').length,females=act.filter(m=>m.gender==='여').length;const zero=act.filter(m=>!fb.some(b=>b.attendees.includes(m.id))).length;document.getElementById('repTxt').textContent='🌿 팔레트 운영 마감 리포트 ['+lbl+']\n'+'═'.repeat(42)+'\n📅 기준일: '+getRef()+' | 🌿 개설 '+opDays()+'일째\n\n👥 회원 현황\n  · 총 회원수: '+act.length+'명 (남 '+males+'명 / 여 '+females+'명)\n  '+(key!=='ALL'?'· 신규 가입: '+nm.length+'명'+(nm.length?' ('+nm.map(m=>m.name).join(', ')+')':''):'')+'\n  · 활동 미달(0회): '+zero+'명\n  · 경고: '+warns.length+'건 / 당일취소(노쇼): '+noshows.length+'건\n  · 이 기간 거절: '+(S.rejects||[]).filter(r=>key==='ALL'||dtKey(r.rejectDate||'')===key).length+'건\n  · 누적 강퇴·탈퇴: '+S.archived.length+'명\n\n⚡ 번개(벙) 현황 ('+fb.length+'회)\n'+(fb.length?fb.map((b,i)=>{const{m:gm,f:gf}=calcGR(b.attendees);return'  '+(i+1)+'. ['+dBadge(b.date)+'] '+b.title+' — 참석 '+b.attendees.length+'명(남'+gm+'/여'+gf+'), 취소 '+b.cancelled.length+'명';}).join('\n'):'  (없음)')+'\n  · 총 당일취소: '+fb.reduce((s,b)=>s+b.cancelled.length,0)+'건\n\n🏆 최고 참여자: '+(top?top[0]+' ('+top[1]+'회)':'해당 없음')+'\n\n'+'═'.repeat(42)+'\n※ 팔레트 운영진 자동 생성 리포트';document.getElementById('repMod').style.display='flex';}
-function renderAll(){safe(updateOpDays);safe(buildAllSels);safe(renderMembers);safe(renderBungs);if(_tab===3)safe(renderDash);else if(_tab===4)safe(renderTab4);}
+
+/* ═══════════════════════════════════════════════════════
+   v23 신규: 번개 뷰 · 캘린더 · 추천스트립 · 장소맵 · 운영진
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 번개 개설 접기/펼치기 ── */
+let _pendingEventId=null;
+function toggleBungCreate(force){
+  if(!_isAdmin)return;
+  const box=document.getElementById('bungCreateBox'), btn=document.getElementById('bAddToggle');
+  const open=(force===true)?true:(force===false?false:box.style.display==='none');
+  box.style.display=open?'block':'none';
+  btn.classList.toggle('on',open);
+  btn.textContent=open?'✕ 닫기':'＋ 번개 입력';
+  if(open){safe(buildPlaceSelects);setTimeout(()=>document.getElementById('bt').focus(),50);}
+}
+
+/* ── 리스트 / 캘린더 뷰 ── */
+let _bungView='list';
+function setBungView(v){
+  _bungView=v;
+  document.getElementById('bViewList').style.display=v==='list'?'block':'none';
+  document.getElementById('bViewCal').style.display=v==='cal'?'block':'none';
+  document.getElementById('vwList').className='ftg '+(v==='list'?'fton':'ftoff');
+  document.getElementById('vwCal').className='ftg '+(v==='cal'?'fton':'ftoff');
+  if(v==='cal')safe(renderCal);
+}
+function onBungFilter(){
+  const mK=document.getElementById('bMF').value||'';
+  if(mK)_calYM=mK;
+  safe(renderBungs);
+}
+function renderBungs(){safe(renderBungsCore);safe(renderCal);safe(renderFeed);safe(buildPlaceSelects);}
+
+/* ── 캘린더 ── */
+let _calYM='';
+function calYM(){
+  if(_calYM)return _calYM;
+  const mK=document.getElementById('bMF')?.value||'';
+  if(mK)return mK;
+  return (latestK()||new Date().toISOString().slice(0,7));
+}
+function calMove(delta){
+  const [y,m]=calYM().split('-').map(Number);
+  const d=new Date(y,m-1+delta,1);
+  _calYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  safe(renderCal);
+}
+function renderCal(){
+  const box=document.getElementById('calBody'); if(!box)return;
+  const ym=calYM(); const [y,m]=ym.split('-').map(Number);
+  const t=document.getElementById('calTitle'); if(t)t.textContent=y+'년 '+m+'월';
+  const first=new Date(y,m-1,1), last=new Date(y,m,0);
+  const startPad=first.getDay(), days=last.getDate();
+  const today=getRef();
+  const byDay={};
+  S.bungs.forEach(b=>{if(!b.date)return;if(b.date.slice(0,7)!==ym)return;(byDay[+b.date.slice(8,10)]=byDay[+b.date.slice(8,10)]||[]).push(b);});
+  let html='<table class="calt"><thead><tr>'+['일','월','화','수','목','금','토'].map((d,i)=>'<th style="color:'+(i===0?'#e11d48':i===6?'#2563eb':'var(--sb)')+'">'+d+'</th>').join('')+'</tr></thead><tbody><tr>';
+  for(let i=0;i<startPad;i++)html+='<td class="oth"></td>';
+  for(let d=1;d<=days;d++){
+    if((startPad+d-1)%7===0&&d!==1)html+='</tr><tr>';
+    const ds=ym+'-'+String(d).padStart(2,'0');
+    const list=byDay[d]||[];
+    const dow=new Date(y,m-1,d).getDay();
+    const cls=[];
+    if(list.length>=2)cls.push('dup');
+    else if(list.length===0&&(dow===5||dow===6||dow===0))cls.push('warn');
+    if(ds===today)cls.push('tdy');
+    html+='<td class="'+cls.join(' ')+'"><span class="caln" style="color:'+(dow===0?'#e11d48':dow===6?'#2563eb':'var(--sb)')+'">'+d+'</span>'
+      +(list.length>=2?' <span title="같은 날 2건 이상">🔴</span>':'')
+      +(list.length===0&&(dow===5||dow===6||dow===0)?' <span title="벙 없는 주말">⚠️</span>':'')
+      +list.map(b=>'<span class="calb'+(isUp(b)?' up':'')+'" title="'+esc(b.title)+' · 참석 '+b.attendees.filter(x=>!b.cancelled.includes(x)).length+'명" onclick="calGoTo(\''+esc(b.id)+'\')">'+(isUp(b)?'📅':'⚡')+esc(b.title)+'</span>').join('')
+      +'</td>';
+  }
+  const tail=(startPad+days)%7; if(tail)for(let i=tail;i<7;i++)html+='<td class="oth"></td>';
+  html+='</tr></tbody></table>';
+  const mc=Object.values(byDay).reduce((a,v)=>a+v.length,0);
+  html+='<p style="font-size:11px;color:var(--mt);margin-top:8px;">'+y+'년 '+m+'월 · 총 '+mc+'건 개설</p>';
+  box.innerHTML=html;
+}
+function calGoTo(bId){
+  setBungView('list');
+  document.getElementById('bMF').value='';
+  document.getElementById('bListSrch').value='';
+  _upF=false;document.getElementById('fUp').className='ftg ftoff';
+  safe(renderBungsCore);
+  setTimeout(()=>{
+    const el=document.querySelector('[data-bid="'+bId+'"]');
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.transition='box-shadow .3s';el.style.boxShadow='0 0 0 3px rgba(5,150,105,.4)';setTimeout(()=>el.style.boxShadow='',1800);}
+  },80);
+}
+
+/* ── 추천 스트립 (공공 API 연동은 Cloudflare Worker 배포 후 활성화) ── */
+function renderFeed(){
+  const box=document.getElementById('feedBody'); if(!box)return;
+  const ts=document.getElementById('feedTs');
+  const feed=S.eventFeed;
+  if(!feed||!Array.isArray(feed.items)||!feed.items.length){
+    if(ts)ts.textContent='';
+    box.innerHTML=WORKER_URL
+      ? '<div class="soon">📭 <b>아직 수집된 후보가 없습니다</b><br>Worker 는 연결되어 있습니다. <b>🔄 새로고침</b>을 눌러 지금 수집하거나,<br>다음 월요일 09:00 KST 자동 수집을 기다리세요.</div>'
+      : '<div class="soon">🔌 <b>공공 API 연동 준비중</b><br>Cloudflare Worker 배포 후 이 파일 상단의 <code>WORKER_URL</code> · <code>WORKER_TOKEN</code> 두 줄만 채우면 자동으로 표시됩니다.<br><span style="font-size:10px;">주 1회(월요일 09:00 KST) 축제·전시·공연·영화 후보를 수집합니다.</span></div>';
+    return;
+  }
+  if(ts)ts.textContent='최종 갱신 '+(feed.fetchedAt||'').slice(0,16).replace('T',' ')+(feed.errors&&feed.errors.length?' · ⚠️ '+feed.errors.length+'개 소스 실패':'');
+  const ico={축제:'🎪',전시:'🖼',공연:'🎭',영화:'🎬'};
+  box.innerHTML=feed.items.slice(0,5).map(it=>{
+    const dup=S.bungs.some(b=>b.date===it.startDate);
+    return '<div class="bc" style="opacity:'+(dup?'.5':'1')+';display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      +'<span style="font-weight:700;">'+(ico[it.category]||'📍')+' '+esc(it.title)+'</span>'
+      +'<span style="font-size:11px;color:var(--mt);">'+esc(it.startDate||'')+' · '+esc(it.region||'')+' · '+(it.isFree?'무료':(it.price?esc(String(it.price)):'-'))+'</span>'
+      +'<span class="pill pg" style="background:var(--pl);color:var(--pri);">'+(it.score||0)+'점</span>'
+      +'<span style="margin-left:auto;display:flex;gap:5px;">'
+      +'<button class="btn bsub" onclick="feedToBung(\''+esc(it.extId)+'\')">⚡개설</button>'
+      +'<button class="btn bsub" onclick="feedToPlace(\''+esc(it.extId)+'\')">🗺️저장</button></span></div>';
+  }).join('');
+}
+async function refreshFeed(){
+  if(!WORKER_URL){alert('Worker 가 아직 연결되지 않았습니다.\n\n1) Cloudflare 에 Worker 를 배포하고\n2) 이 HTML 상단의 WORKER_URL / WORKER_TOKEN 두 줄을 채워주세요.\n\n※ 공공 API 인증키는 이 파일이 아니라 Worker Secret 에 넣습니다.');return;}
+  if(!_isAdmin){alert('운영진 계정에서만 수동 수집이 가능합니다.');return;}
+  const btn=document.getElementById('feedRefreshBtn');
+  const old=btn?btn.textContent:'';
+  if(btn){btn.textContent='⏳ 수집 중...';btn.disabled=true;}
+  try{
+    const r=await fetch(WORKER_URL.replace(/\/+$/,'')+'/refresh?token='+encodeURIComponent(WORKER_TOKEN));
+    const j=await r.json();
+    if(!j.ok)throw new Error(j.error||'실패');
+    let msg='✅ 수집 완료\n\n수집 '+j.collected+'건 → 상위 '+j.published+'건 노출';
+    if(j.errors&&j.errors.length)msg+='\n\n⚠️ 실패한 소스:\n· '+j.errors.join('\n· ');
+    alert(msg);
+  }catch(e){
+    alert('수집 실패: '+e.message+'\n\nWorker 주소와 토큰을 확인해 주세요.');
+  }finally{
+    if(btn){btn.textContent=old;btn.disabled=false;}
+  }
+}
+window._renderFeed=()=>safe(renderFeed);
+function feedToBung(extId){
+  const it=(S.eventFeed?.items||[]).find(x=>x.extId===extId); if(!it)return;
+  toggleBungCreate(true);
+  document.getElementById('bt').value=it.title||'';
+  document.getElementById('bdt').value=it.startDate||'';
+  _pendingEventId=extId;
+}
+async function feedToPlace(extId){
+  const it=(S.eventFeed?.items||[]).find(x=>x.extId===extId); if(!it)return;
+  openPlaceModal();
+  document.getElementById('pmName').value=it.venue||it.title||'';
+  document.getElementById('pmRegion').value=it.region||'';
+  document.getElementById('pmUrl').value=it.url||'';
+}
+
+/* ═══ 장소맵 ═══ */
+const COURSE={round1:null,round2:null};
+let _plcRound='', _plcCatSel=new Set(), _plcEditId=null;
+
+function normUrl(u){ if(!u)return''; return String(u).trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/+$/,'').split('?')[0].split('#')[0]; }
+function plcDerive(p){
+  const used=S.bungs.filter(b=>b.placeIds&&(b.placeIds.round1===p.id||b.placeIds.round2===p.id)&&b.date);
+  const useCount=used.length;
+  const lastUsedAt=useCount?used.map(b=>b.date).sort().slice(-1)[0]:null;
+  let daysSince=null;
+  if(lastUsedAt){const a=new Date(getRef()),b=new Date(lastUsedAt);a.setHours(0,0,0,0);b.setHours(0,0,0,0);daysSince=Math.round((a-b)/86400000);}
+  return {useCount,lastUsedAt,daysSince};
+}
+function plcBadge(d){
+  if(d.useCount===0)return '<span class="pill" style="background:#dcfce7;color:#15803d;">🟢 미방문</span>';
+  if(d.daysSince===null)return '<span class="pill" style="background:#f1f5f9;color:#64748b;">사용 '+d.useCount+'회</span>';
+  if(d.daysSince<60)return '<span class="pill" style="background:var(--gl);color:var(--gold);">🟠 D-'+d.daysSince+'</span>';
+  return '<span class="pill" style="background:#f1f5f9;color:#64748b;">⚪ D-'+d.daysSince+'</span>';
+}
+function setPlcRound(r){
+  _plcRound=r;
+  document.getElementById('plcR_').className='ftg '+(r===''?'fton':'ftoff');
+  document.getElementById('plcR1').className='ftg '+(r==='1차'?'fton':'ftoff');
+  document.getElementById('plcR2').className='ftg '+(r==='2차'?'fton':'ftoff');
+  safe(renderPlaces);
+}
+function renderCatBar(){
+  const bar=document.getElementById('plcCatBar'); if(!bar)return;
+  bar.innerHTML=(S.placeCategories||[]).map(c=>'<span class="cchip'+(_plcCatSel.has(c)?' on':'')+'" onclick="togglePlcCat(\''+esc(c).replace(/'/g,"\\'")+'\')">'+esc(c)+'</span>').join('')
+    +(_plcCatSel.size?'<span class="cchip" style="border-style:dashed;" onclick="clearPlcCat()">✕ 해제</span>':'');
+}
+function togglePlcCat(c){_plcCatSel.has(c)?_plcCatSel.delete(c):_plcCatSel.add(c);renderCatBar();safe(renderPlaces);}
+function clearPlcCat(){_plcCatSel.clear();renderCatBar();safe(renderPlaces);}
+function buildPlcRegions(){
+  const sel=document.getElementById('plcRg'); if(!sel)return;
+  const cur=sel.value;
+  const rs=[...new Set((S.places||[]).map(p=>p.region).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">전체</option>'+rs.map(r=>'<option'+(r===cur?' selected':'')+'>'+esc(r)+'</option>').join('');
+  const dl=document.getElementById('regionList');
+  if(dl){const all=[...new Set([...rs,...activeM().map(m=>m.region).filter(Boolean)])].sort();dl.innerHTML=all.map(r=>'<option value="'+esc(r)+'">').join('');}
+}
+function renderPlaces(){
+  safe(buildPlcRegions); safe(renderCatBar); safe(renderSlots);
+  const grid=document.getElementById('plcGrid'), empty=document.getElementById('plcEmpty'); if(!grid)return;
+  const rg=document.getElementById('plcRg').value||'';
+  const st=document.getElementById('plcSt').value||'';
+  const sort=document.getElementById('plcSort').value||'recent';
+  const q=(document.getElementById('plcQ').value||'').trim().toLowerCase();
+  let list=(S.places||[]).slice();
+  if(st==='')list=list.filter(p=>p.status!=='블랙');
+  else if(st!=='__all')list=list.filter(p=>p.status===st);
+  if(rg)list=list.filter(p=>p.region===rg);
+  if(_plcRound)list=list.filter(p=>(p.rounds||[]).includes(_plcRound));
+  if(_plcCatSel.size)list=list.filter(p=>(p.categories||[]).some(c=>_plcCatSel.has(c)));
+  if(q)list=list.filter(p=>(p.name+' '+p.region+' '+(p.categories||[]).join(' ')+' '+(p.memo||'')).toLowerCase().includes(q));
+  const D={}; list.forEach(p=>D[p.id]=plcDerive(p));
+  const cmp={
+    recent:(a,b)=>(D[b.id].lastUsedAt||'').localeCompare(D[a.id].lastUsedAt||''),
+    old:(a,b)=>(D[a.id].lastUsedAt||'0000-00-00').localeCompare(D[b.id].lastUsedAt||'0000-00-00'),
+    use:(a,b)=>D[b.id].useCount-D[a.id].useCount,
+    name:(a,b)=>a.name.localeCompare(b.name,'ko'),
+    new:(a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')
+  }[sort];
+  list.sort(cmp);
+  const cnt=document.getElementById('plcCnt'); if(cnt)cnt.textContent='표시 '+list.length+'곳 / 총 '+(S.places||[]).length+'곳';
+  if(!list.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=list.map(p=>{
+    const d=D[p.id];
+    const rounds=(p.rounds||[]).join('·');
+    return '<div class="plc'+(p.status==='블랙'?' blk':'')+'">'
+      +(p.naverUrl?'<a class="plcb" href="'+esc(p.naverUrl)+'" target="_blank" rel="noopener" title="네이버 지도 열기">↗</a>':'')
+      +'<div style="font-weight:800;font-size:13px;padding-right:18px;'+(_isAdmin?'cursor:pointer;':'')+'" '+(_isAdmin?'onclick="openPlaceModal(\''+esc(p.id)+'\')"':'')+'>'+esc(p.name)+(p.status!=='활성'?' <span class="pill" style="background:#f1f5f9;color:#64748b;">'+esc(p.status)+'</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--sb);">'+esc(p.region||'-')+' · '+esc((p.categories||[]).join(', ')||'-')+'</div>'
+      +'<div style="font-size:11px;color:var(--mt);">'+esc(rounds||'-')+(p.capacity?' · 최대 '+p.capacity+'인':'')+(p.priceRange?' · '+esc(p.priceRange):'')+'</div>'
+      +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">'+plcBadge(d)+'<span style="font-size:10px;color:var(--mt);">사용 '+d.useCount+'회'+(d.lastUsedAt?' · 최근 '+d.lastUsedAt:'')+'</span></div>'
+      +(p.memo?'<div style="font-size:10px;color:var(--mt);border-top:1px dashed var(--bd);padding-top:4px;">'+esc(p.memo)+'</div>':'')
+      +(_isAdmin?'<div style="display:flex;gap:4px;margin-top:2px;">'
+        +((p.rounds||[]).includes('1차')?'<button class="btn bsub" style="flex:1;" onclick="addToCourse(\''+esc(p.id)+'\',\'round1\')">1차 담기</button>':'')
+        +((p.rounds||[]).includes('2차')?'<button class="btn bsub" style="flex:1;" onclick="addToCourse(\''+esc(p.id)+'\',\'round2\')">2차 담기</button>':'')
+        +'<button class="btn bsub" style="flex-shrink:0;" onclick="openPlaceModal(\''+esc(p.id)+'\')">✏️</button></div>':'')
+      +'</div>';
+  }).join('');
+}
+function renderSlots(){
+  const g=id=>document.getElementById(id);
+  [['slot1','round1','1차'],['slot2','round2','2차']].forEach(([el,k,lbl])=>{
+    const node=g(el); if(!node)return;
+    const p=(S.places||[]).find(x=>x.id===COURSE[k]);
+    node.className='slot'+(p?' fill':'');
+    node.textContent=lbl+': '+(p?p.name+'  ✕':'비어있음');
+  });
+}
+function addToCourse(id,round){COURSE[round]=id;renderSlots();}
+function clearSlot(round){COURSE[round]=null;renderSlots();}
+function courseToBung(){
+  if(!COURSE.round1&&!COURSE.round2){alert('코스 슬롯에 장소를 먼저 담아주세요.');return;}
+  switchTab(2);
+  toggleBungCreate(true);
+  safe(buildPlaceSelects);
+  document.getElementById('bp1').value=COURSE.round1||'';
+  document.getElementById('bp2').value=COURSE.round2||'';
+  const names=['round1','round2'].map(k=>(S.places||[]).find(x=>x.id===COURSE[k])?.name).filter(Boolean);
+  const hint=document.getElementById('bCourseHint');
+  if(hint){hint.style.display='block';hint.textContent='🧺 장소맵 코스 적용: '+names.join(' → ')+' · 제목과 날짜만 입력하면 됩니다.';}
+  setTimeout(()=>document.getElementById('bt').focus(),80);
+}
+function buildPlaceSelects(){
+  ['bp1','bp2'].forEach((id,i)=>{
+    const sel=document.getElementById(id); if(!sel)return;
+    const cur=sel.value;
+    const want=i===0?'1차':'2차';
+    const opts=(S.places||[]).filter(p=>p.status!=='블랙'&&(p.rounds||[]).includes(want));
+    sel.innerHTML='<option value="">선택 안함</option>'+opts.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===cur?' selected':'')+'>'+esc(p.name)+(p.region?' ('+esc(p.region)+')':'')+'</option>').join('');
+  });
+}
+function openPlaceModal(id){
+  if(!_isAdmin)return;
+  _plcEditId=id||null;
+  const p=id?(S.places||[]).find(x=>x.id===id):null;
+  document.getElementById('plcModTitle').textContent=p?'🗺️ 장소 수정':'🗺️ 장소 등록';
+  document.getElementById('pmName').value=p?p.name:'';
+  document.getElementById('pmRegion').value=p?p.region:'';
+  document.getElementById('pmStatus').value=p?p.status:'활성';
+  document.getElementById('pmR1').checked=p?(p.rounds||[]).includes('1차'):true;
+  document.getElementById('pmR2').checked=p?(p.rounds||[]).includes('2차'):false;
+  document.getElementById('pmCap').value=(p&&p.capacity!=null)?p.capacity:'';
+  document.getElementById('pmPrice').value=p?p.priceRange:'';
+  document.getElementById('pmUrl').value=p?p.naverUrl:'';
+  document.getElementById('pmMemo').value=p?p.memo:'';
+  document.getElementById('pmDupWarn').style.display='none';
+  document.getElementById('pmDelBtn').style.display=p?'':'none';
+  const sel=new Set(p?(p.categories||[]):[]);
+  document.getElementById('pmCats').innerHTML=(S.placeCategories||[]).map(c=>'<span class="cchip'+(sel.has(c)?' on':'')+'" onclick="this.classList.toggle(\'on\')">'+esc(c)+'</span>').join('');
+  safe(buildPlcRegions);
+  document.getElementById('plcMod').style.display='flex';
+}
+async function savePlace(){
+  const name=(document.getElementById('pmName').value||'').trim();
+  if(!name){alert('장소명을 입력하세요.');return;}
+  const rounds=[]; if(document.getElementById('pmR1').checked)rounds.push('1차'); if(document.getElementById('pmR2').checked)rounds.push('2차');
+  if(!rounds.length){alert('차수를 1개 이상 선택하세요.');return;}
+  const url=(document.getElementById('pmUrl').value||'').trim();
+  if(url){
+    const n=normUrl(url);
+    const dup=(S.places||[]).find(p=>p.id!==_plcEditId&&p.naverUrl&&normUrl(p.naverUrl)===n);
+    if(dup){
+      const w=document.getElementById('pmDupWarn');
+      w.style.display='block'; w.textContent='⚠️ 같은 링크의 장소가 이미 있습니다: '+dup.name+' — 계속하려면 다시 저장을 누르세요.';
+      if(!w.dataset.armed){w.dataset.armed='1';return;}
+      delete w.dataset.armed;
+    }
+  }
+  const cats=[...document.querySelectorAll('#pmCats .cchip.on')].map(e=>e.textContent);
+  const capRaw=document.getElementById('pmCap').value;
+  const data={
+    name, region:(document.getElementById('pmRegion').value||'').trim(),
+    categories:cats, rounds,
+    naverUrl:url, memo:(document.getElementById('pmMemo').value||'').trim(),
+    capacity:capRaw===''?null:+capRaw,
+    priceRange:(document.getElementById('pmPrice').value||'').trim(),
+    status:document.getElementById('pmStatus').value||'활성'
+  };
+  if(_plcEditId){
+    const p=(S.places||[]).find(x=>x.id===_plcEditId); if(p)Object.assign(p,data);
+  }else{
+    S.places.push(Object.assign({id:'plc_'+uid(),createdAt:new Date().toISOString().slice(0,10),createdBy:''},data));
+  }
+  await save(); closeM('plcMod'); renderPlaces(); safe(buildPlaceSelects);
+}
+async function deletePlace(){
+  if(!_plcEditId)return;
+  const used=S.bungs.filter(b=>b.placeIds&&(b.placeIds.round1===_plcEditId||b.placeIds.round2===_plcEditId));
+  if(!confirm('이 장소를 삭제하시겠습니까?'+(used.length?'\n※ 연결된 번개 '+used.length+'건의 장소 정보도 해제됩니다.':'')))return;
+  used.forEach(b=>{if(b.placeIds.round1===_plcEditId)b.placeIds.round1=null;if(b.placeIds.round2===_plcEditId)b.placeIds.round2=null;});
+  S.places=S.places.filter(p=>p.id!==_plcEditId);
+  if(COURSE.round1===_plcEditId)COURSE.round1=null;
+  if(COURSE.round2===_plcEditId)COURSE.round2=null;
+  await save(); closeM('plcMod'); renderPlaces(); safe(renderBungs);
+}
+function openCatModal(){ if(!_isAdmin)return; renderCatList(); document.getElementById('catMod').style.display='flex'; }
+function renderCatList(){
+  document.getElementById('catList').innerHTML=(S.placeCategories||[]).map(c=>{
+    const n=(S.places||[]).filter(p=>(p.categories||[]).includes(c)).length;
+    return '<div style="display:flex;align-items:center;gap:6px;background:var(--s2);padding:5px 9px;border-radius:8px;font-size:12px;"><span style="flex:1;">'+esc(c)+'</span><span style="font-size:10px;color:var(--mt);">'+n+'곳</span><button class="xbtn" onclick="safe(delCat,\''+esc(c).replace(/'/g,"\\'")+'\')">✕</button></div>';
+  }).join('');
+}
+async function addCat(){
+  const v=(document.getElementById('catNew').value||'').trim();
+  if(!v)return;
+  if((S.placeCategories||[]).includes(v)){alert('이미 있는 카테고리입니다.');return;}
+  S.placeCategories.push(v); document.getElementById('catNew').value='';
+  await save(); renderCatList(); renderCatBar();
+}
+async function delCat(c){
+  const n=(S.places||[]).filter(p=>(p.categories||[]).includes(c)).length;
+  if(!confirm('"'+c+'" 카테고리를 삭제할까요?'+(n?'\n※ '+n+'곳의 장소에서 이 카테고리가 제거됩니다.':'')))return;
+  S.placeCategories=S.placeCategories.filter(x=>x!==c);
+  (S.places||[]).forEach(p=>p.categories=(p.categories||[]).filter(x=>x!==c));
+  _plcCatSel.delete(c);
+  await save(); renderCatList(); renderPlaces();
+}
+
+/* ═══ 운영진 회의록 ═══ */
+let _stfCur=null;
+function prevYM(ym){const[y,m]=ym.split('-').map(Number);const d=new Date(y,m-2,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function staffNames(){const r=S.members.filter(m=>m.role==='모임장'||m.role==='운영진').map(m=>m.name);return r.length?r:S.members.slice(0,4).map(m=>m.name);}
+function calcMonthMetrics(ym){
+  const bs=S.bungs.filter(b=>b.date&&dtKey(b.date)===ym);
+  const meetupCount=bs.length;
+  let attendeeTotal=0; bs.forEach(b=>attendeeTotal+=b.attendees.filter(id=>!b.cancelled.includes(id)).length);
+  const act=activeM();
+  const avgAttendanceRate=(meetupCount&&act.length)?+((attendeeTotal/meetupCount/act.length)*100).toFixed(1):0;
+  const newMembers=S.members.filter(m=>m.joindate&&dtKey(m.joindate)===ym).length
+                  +S.archived.filter(m=>m.joindate&&dtKey(m.joindate)===ym).length;
+  const leftMembers=S.archived.filter(m=>m.exitDate&&dtKey(String(m.exitDate).replace(/\//g,'-').split('-').map((v,i)=>i?String(v).padStart(2,'0'):v).join('-'))===ym).length;
+  const warnings=(S.warnings||[]).filter(w=>w.date&&dtKey(w.date)===ym&&w.type==='경고').length;
+  const noShows=bs.reduce((a,b)=>a+(b.cancelled||[]).length,0);
+  const genderRatio={m:act.filter(x=>x.gender==='남').length,f:act.filter(x=>x.gender==='여').length};
+  const attendedIds=new Set(); bs.forEach(b=>b.attendees.forEach(id=>attendedIds.add(id)));
+  const zeroAttendCount=act.filter(m=>!S.bungs.some(b=>b.attendees.includes(m.id))).length;
+  const ref=new Date(getRef()); ref.setHours(0,0,0,0);
+  const dormant30Count=act.filter(m=>{
+    const mine=S.bungs.filter(b=>b.date&&b.attendees.includes(m.id)&&!b.cancelled.includes(m.id)).map(b=>b.date).sort();
+    if(!mine.length)return false;
+    const last=new Date(mine[mine.length-1]); last.setHours(0,0,0,0);
+    return (ref-last)/86400000>=30;
+  }).length;
+  let settlementTotal=0;
+  bs.forEach(b=>{const sh=(S.settlements||{})[b.id];if(Array.isArray(sh)&&sh.length){const l=sh[sh.length-1];(l.costs||[]).forEach(c=>settlementTotal+=(+c.total||0));}});
+  return {meetupCount,attendeeTotal,avgAttendanceRate,newMembers,leftMembers,warnings,noShows,genderRatio,zeroAttendCount,dormant30Count,settlementTotal};
+}
+function stfRenderSel(){
+  const sel=document.getElementById('stfSel'); if(!sel)return;
+  const list=(S.staffMeetings||[]).slice().sort((a,b)=>b.yearMonth.localeCompare(a.yearMonth));
+  const cur=_stfCur||(list[0]?list[0].id:'');
+  sel.innerHTML=list.length?list.map(m=>'<option value="'+esc(m.id)+'"'+(m.id===cur?' selected':'')+'>'+m.yearMonth.replace('-','년 ')+'월'+(m.locked?' 🔒':'')+'</option>').join(''):'<option value="">(없음)</option>';
+  _stfCur=cur;
+  stfRender();
+}
+function stfGet(){return (S.staffMeetings||[]).find(m=>m.id===(document.getElementById('stfSel')?.value||_stfCur));}
+async function stfNew(){
+  const now=new Date();
+  const def=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const ym=(prompt('회의록 연월 (YYYY-MM)',def)||'').trim();
+  if(!/^\d{4}-\d{2}$/.test(ym)){if(ym)alert('YYYY-MM 형식으로 입력하세요.');return;}
+  if((S.staffMeetings||[]).some(m=>m.yearMonth===ym)){alert('해당 월 회의록이 이미 있습니다.');return;}
+  const target=prevYM(ym);
+  const prev=(S.staffMeetings||[]).slice().sort((a,b)=>b.yearMonth.localeCompare(a.yearMonth)).find(m=>m.yearMonth<ym);
+  const carried=(prev?.actions||[]).filter(a=>a.status!=='완료').map(a=>({id:uid(),text:a.text,owner:a.owner,due:a.due,status:a.status||'대기',carriedFrom:prev.id}));
+  const rec={id:'mtg_'+ym.replace('-','_'),yearMonth:ym,createdAt:new Date().toISOString().slice(0,10),locked:false,
+    metricsOf:target,metrics:calcMonthMetrics(target),good:'',bad:'',issues:[],decisions:[],actions:carried};
+  S.staffMeetings.push(rec);
+  _stfCur=rec.id;
+  await save(); stfRenderSel();
+}
+function stfRender(){
+  const rec=stfGet();
+  const body=document.getElementById('stfBody'), empty=document.getElementById('stfEmpty');
+  if(!rec){body.style.display='none';empty.style.display='block';document.getElementById('stfLockBadge').textContent='';return;}
+  _stfCur=rec.id;
+  empty.style.display='none'; body.style.display='grid';
+  const ro=!!rec.locked||!_isAdmin;
+  document.getElementById('stfLockBadge').innerHTML=rec.locked?'<span class="pill" style="background:var(--gl);color:var(--gold);">🔒 확정됨 (읽기 전용)</span>':'<span class="pill" style="background:var(--pl);color:var(--pri);">✏️ 작성중</span>';
+  document.getElementById('stfLockBtn').textContent=rec.locked?'🔓 잠금 해제':'🔒 확정';
+  document.getElementById('stfMetTitle').textContent='('+(rec.metricsOf||prevYM(rec.yearMonth))+')';
+  const m=rec.metrics||{};
+  document.getElementById('stfMet').innerHTML=
+     '⚡ 번개 <b>'+(m.meetupCount||0)+'회</b> · 참석 연인원 <b>'+(m.attendeeTotal||0)+'명</b> · 평균 참석률 <b>'+(m.avgAttendanceRate||0)+'%</b><br>'
+    +'🆕 신규 <b>+'+(m.newMembers||0)+'</b> · 탈퇴/강퇴 <b>-'+(m.leftMembers||0)+'</b> · 경고 <b>'+(m.warnings||0)+'</b> · 당일취소 <b>'+(m.noShows||0)+'</b><br>'
+    +'⚧ 성비 남'+(m.genderRatio?.m||0)+' / 여'+(m.genderRatio?.f||0)+' · 무참석 <b>'+(m.zeroAttendCount||0)+'명</b> · 30일 미참석 <b>'+(m.dormant30Count||0)+'명</b><br>'
+    +'💰 월 정산 총액 <b>'+(m.settlementTotal||0).toLocaleString()+'원</b>'
+    +'<div style="font-size:10px;color:var(--mt);margin-top:5px;">※ 생성 시점 스냅샷. 이탈 지표는 집계 숫자로만 사용하며 개인 대상 조치와 연동되지 않습니다.</div>';
+  const g=document.getElementById('stfGood'), b=document.getElementById('stfBad');
+  g.value=rec.good||''; b.value=rec.bad||''; g.disabled=ro; b.disabled=ro;
+  document.getElementById('stfIssues').innerHTML=(rec.issues||[]).map((it,i)=>
+    '<div style="display:flex;gap:5px;margin-bottom:5px;"><input value="'+esc(it.text||'')+'" '+(ro?'disabled':'')+' oninput="stfSet(\'issues\','+i+',this.value)" placeholder="이슈 내용"><button class="xbtn" '+(ro?'disabled':'')+' onclick="safe(stfDel,\'issues\','+i+')">✕</button></div>').join('')
+    ||'<p style="font-size:11px;color:var(--mt);">항목이 없습니다.</p>';
+  document.getElementById('stfDecisions').innerHTML=(rec.decisions||[]).map((it,i)=>
+    '<div style="display:flex;gap:5px;margin-bottom:5px;"><input value="'+esc(it||'')+'" '+(ro?'disabled':'')+' oninput="stfSet(\'decisions\','+i+',this.value)" placeholder="결정사항"><button class="xbtn" '+(ro?'disabled':'')+' onclick="safe(stfDel,\'decisions\','+i+')">✕</button></div>').join('')
+    ||'<p style="font-size:11px;color:var(--mt);">항목이 없습니다.</p>';
+  const owners=staffNames();
+  document.getElementById('stfActions').innerHTML=(rec.actions||[]).map((a,i)=>
+    '<div class="stfrow">'
+    +'<input value="'+esc((a.carriedFrom?'↩ ':'')+(a.text||''))+'" '+(ro?'disabled':'')+' oninput="stfSetAct('+i+',\'text\',this.value.replace(/^↩\\s*/,\'\'))" placeholder="할 일">'
+    +'<select '+(ro?'disabled':'')+' onchange="stfSetAct('+i+',\'owner\',this.value)"><option value="">담당</option>'+owners.map(n=>'<option'+(n===a.owner?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>'
+    +'<input type="date" value="'+esc(a.due||'')+'" '+(ro?'disabled':'')+' onchange="stfSetAct('+i+',\'due\',this.value)">'
+    +'<select '+(ro?'disabled':'')+' onchange="stfSetAct('+i+',\'status\',this.value)">'+['대기','진행','완료'].map(x=>'<option'+(x===(a.status||'대기')?' selected':'')+'>'+x+'</option>').join('')+'</select>'
+    +'<button class="xbtn" '+(ro?'disabled':'')+' onclick="safe(stfDel,\'actions\','+i+')">✕</button></div>').join('')
+    ||'<p style="font-size:11px;color:var(--mt);">항목이 없습니다.</p>';
+}
+function stfSet(k,i,v){const r=stfGet();if(!r||r.locked)return;if(k==='issues')r.issues[i].text=v;else r.decisions[i]=v;}
+function stfSetAct(i,k,v){const r=stfGet();if(!r||r.locked)return;r.actions[i][k]=v;}
+function stfAddIssue(){const r=stfGet();if(!r||r.locked)return;r.issues=r.issues||[];r.issues.push({text:'',memberIds:[]});stfRender();}
+function stfAddDecision(){const r=stfGet();if(!r||r.locked)return;r.decisions=r.decisions||[];r.decisions.push('');stfRender();}
+function stfAddAction(){const r=stfGet();if(!r||r.locked)return;r.actions=r.actions||[];r.actions.push({id:uid(),text:'',owner:'',due:'',status:'대기',carriedFrom:null});stfRender();}
+function stfDel(k,i){const r=stfGet();if(!r||r.locked)return;r[k].splice(i,1);stfRender();}
+async function stfSave(){
+  const r=stfGet(); if(!r){alert('회의록이 없습니다.');return;}
+  if(r.locked){alert('확정된 회의록은 수정할 수 없습니다.');return;}
+  r.good=document.getElementById('stfGood').value;
+  r.bad=document.getElementById('stfBad').value;
+  await save(); alert('저장했습니다.');
+}
+async function stfToggleLock(){
+  const r=stfGet(); if(!r)return;
+  if(!r.locked){ if(!confirm('확정하면 읽기 전용이 됩니다. 계속할까요?'))return; await stfSaveSilent(); r.locked=true; }
+  else { if(!confirm('잠금을 해제할까요? (모임장 권한)'))return; r.locked=false; }
+  await save(); stfRender();
+}
+async function stfSaveSilent(){const r=stfGet();if(!r)return;r.good=document.getElementById('stfGood').value;r.bad=document.getElementById('stfBad').value;}
+function stfCopy(){
+  const r=stfGet(); if(!r)return;
+  const m=r.metrics||{};
+  const t='🧑‍💼 팔레트 운영진 회의록 ['+r.yearMonth+']\n'+'═'.repeat(38)
+   +'\n\n① 지난달 지표 ('+(r.metricsOf||'')+')\n'
+   +'  · 번개 '+(m.meetupCount||0)+'회 / 참석 연인원 '+(m.attendeeTotal||0)+'명 / 평균 참석률 '+(m.avgAttendanceRate||0)+'%\n'
+   +'  · 신규 +'+(m.newMembers||0)+' / 탈퇴·강퇴 -'+(m.leftMembers||0)+' / 경고 '+(m.warnings||0)+' / 당일취소 '+(m.noShows||0)+'\n'
+   +'  · 성비 남'+(m.genderRatio?.m||0)+'·여'+(m.genderRatio?.f||0)+' / 무참석 '+(m.zeroAttendCount||0)+'명 / 30일 미참석 '+(m.dormant30Count||0)+'명\n'
+   +'  · 월 정산 총액 '+(m.settlementTotal||0).toLocaleString()+'원\n'
+   +'\n② 잘된 점\n  '+(r.good||'-').replace(/\n/g,'\n  ')
+   +'\n\n   아쉬운 점\n  '+(r.bad||'-').replace(/\n/g,'\n  ')
+   +'\n\n③ 이슈 및 논의\n'+((r.issues||[]).filter(x=>x.text).map((x,i)=>'  '+(i+1)+'. '+x.text).join('\n')||'  (없음)')
+   +'\n\n④ 결정사항\n'+((r.decisions||[]).filter(Boolean).map((x,i)=>'  '+(i+1)+'. '+x).join('\n')||'  (없음)')
+   +'\n\n⑤ 액션아이템\n'+((r.actions||[]).filter(a=>a.text).map(a=>'  '+(a.carriedFrom?'↩ ':'· ')+a.text+' — '+(a.owner||'미정')+' / '+(a.due||'기한없음')+' / '+(a.status||'대기')).join('\n')||'  (없음)')
+   +'\n\n'+'═'.repeat(38)+(r.locked?'\n🔒 확정':'');
+  navigator.clipboard.writeText(t).then(()=>alert('회의록을 복사했습니다.'),()=>prompt('복사:',t));
+}
+
+/* ═══ 월별 추이 / 요일 차트 ═══ */
+let _trendChart=null,_dowChart=null;
+function renderTrendChart(){
+  const cv=document.getElementById('trendC'); if(!cv||typeof Chart==='undefined')return;
+  const keys=allMK().slice().sort();
+  const act=activeM().length||1;
+  const meet=[],att=[],rate=[],tot=[],join=[],leave=[];
+  keys.forEach(k=>{
+    const bs=S.bungs.filter(b=>b.date&&dtKey(b.date)===k);
+    const a=bs.reduce((s,b)=>s+b.attendees.filter(id=>!b.cancelled.includes(id)).length,0);
+    meet.push(bs.length); att.push(a);
+    const nj=S.members.filter(m=>m.joindate&&dtKey(m.joindate)===k).length+S.archived.filter(m=>m.joindate&&dtKey(m.joindate)===k).length;
+    const lv=S.archived.filter(m=>m.exitDate&&dtKey(String(m.exitDate).replace(/\//g,'-').split('-').map((v,i)=>i?String(v).padStart(2,'0'):v).join('-'))===k).length;
+    join.push(nj); leave.push(-lv);
+    const cum=[...S.members,...S.archived].filter(m=>m.joindate&&m.joindate.slice(0,7)<=k).length
+             -S.archived.filter(m=>m.exitDate&&String(m.exitDate).replace(/\//g,'-').split('-').map((v,i)=>i?String(v).padStart(2,'0'):v).join('-').slice(0,7)<=k).length;
+    tot.push(cum);
+    rate.push(bs.length&&cum?+((a/bs.length/cum)*100).toFixed(1):0);
+  });
+  if(_trendChart)_trendChart.destroy();
+  _trendChart=new Chart(cv,{data:{labels:keys.map(mkLbl),datasets:[
+    {type:'bar',label:'신규 가입',data:join,backgroundColor:'rgba(5,150,105,.35)',yAxisID:'y',order:5},
+    {type:'bar',label:'탈퇴·강퇴',data:leave,backgroundColor:'rgba(225,29,72,.35)',yAxisID:'y',order:5},
+    {type:'line',label:'번개 개설',data:meet,borderColor:'#059669',backgroundColor:'#059669',tension:.3,yAxisID:'y',order:1},
+    {type:'line',label:'참석 연인원',data:att,borderColor:'#0d9488',backgroundColor:'#0d9488',tension:.3,yAxisID:'y',order:2},
+    {type:'line',label:'총 회원수',data:tot,borderColor:'#d97706',backgroundColor:'#d97706',borderDash:[5,3],tension:.3,yAxisID:'y1',order:3},
+    {type:'line',label:'평균 참석률(%)',data:rate,borderColor:'#7c3aed',backgroundColor:'#7c3aed',borderDash:[2,2],tension:.3,yAxisID:'y1',order:4}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{boxWidth:10,font:{size:10}}}},
+    scales:{y:{beginAtZero:true,title:{display:true,text:'건 / 명',font:{size:9}},ticks:{font:{size:9}}},
+            y1:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},title:{display:true,text:'% / 명',font:{size:9}},ticks:{font:{size:9}}},
+            x:{ticks:{font:{size:9}}}}}});
+}
+function renderDowChart(){
+  const cv=document.getElementById('dowC'); if(!cv||typeof Chart==='undefined')return;
+  const names=['일','월','화','수','목','금','토'];
+  const sum=[0,0,0,0,0,0,0], cnt=[0,0,0,0,0,0,0];
+  S.bungs.forEach(b=>{if(!b.date)return;const d=new Date(b.date);if(isNaN(d))return;const w=d.getDay();sum[w]+=b.attendees.filter(id=>!b.cancelled.includes(id)).length;cnt[w]++;});
+  const avg=sum.map((v,i)=>cnt[i]?+(v/cnt[i]).toFixed(1):0);
+  const n=document.getElementById('dowN'); if(n)n.textContent='(표본 '+cnt.reduce((a,b)=>a+b,0)+'건)';
+  if(_dowChart)_dowChart.destroy();
+  _dowChart=new Chart(cv,{type:'bar',data:{labels:names.map((x,i)=>x+' ('+cnt[i]+')'),datasets:[{label:'평균 참석 인원',data:avg,
+    backgroundColor:avg.map((v,i)=>i===6?'rgba(37,99,235,.6)':i===0?'rgba(225,29,72,.55)':'rgba(5,150,105,.6)')}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{font:{size:9}}},x:{ticks:{font:{size:9}}}}}});
+}
+
+function renderAll(){safe(updateOpDays);safe(buildAllSels);safe(renderMembers);safe(renderBungs);safe(renderCatBar);if(_tab===3)safe(renderDash);else if(_tab===4)safe(renderTab4);else if(_tab===5)safe(renderPlaces);else if(_tab===6)safe(stfRenderSel);}
 
 (async function boot(){
   document.getElementById('refDate').value=new Date().toISOString().slice(0,10);
   await loadData();
+  safe(renderCatBar);
+  safe(buildPlaceSelects);
+  safe(renderSlots);
+  safe(renderFeed);
   renderAll();
 })();
 </script>
