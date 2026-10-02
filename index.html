@@ -593,6 +593,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
       <label class="lbl">이름</label><input id="ename" placeholder="이름">
       <label class="lbl">출생연도</label><input id="eby" type="number" oninput="previewEditAge()">
       <div id="eap" style="font-size:11px;color:var(--pri);min-height:14px;"></div>
+      <label class="lbl">생년월일</label><input id="ebd" type="date" onchange="syncEditBirth()">
       <select id="em"><option value="">MBTI</option><option>INTJ</option><option>INTP</option><option>ENTJ</option><option>ENTP</option><option>INFJ</option><option>INFP</option><option>ENFJ</option><option>ENFP</option><option>ISTJ</option><option>ISFJ</option><option>ESTJ</option><option>ESFJ</option><option>ISTP</option><option>ISFP</option><option>ESTP</option><option>ESFP</option></select>
       <select id="ero"><option value="">역할</option><option>모임장</option><option>운영진</option><option>일반</option></select>
       <select id="egr"><option value="">등급</option><option>우수</option><option>체크</option><option>일반</option></select>
@@ -1058,6 +1059,7 @@ function joinDaysNum(m){if(!m.joindate)return 0;const ref=new Date(getRef());ref
 function isNew(m){if(!m.joindate)return false;const ref=new Date(getRef());ref.setHours(0,0,0,0);const jd=new Date(m.joindate);jd.setHours(0,0,0,0);const d=Math.floor((ref-jd)/86400000)+1;return d>=1&&d<=7;}
 function previewAge(){const y=parseInt(document.getElementById('fby').value||'0',10);document.getElementById('fap').textContent=(y>1900&&y<2020)?'→ 한국식 나이: '+kr(y)+'세':'';}
 function previewEditAge(){const y=parseInt(document.getElementById('eby').value||'0',10);document.getElementById('eap').textContent=(y>1900&&y<2020)?'→ 한국식 나이: '+kr(y)+'세':'';}
+function syncEditBirth(){const v=document.getElementById('ebd').value||'';if(!v)return;const y=parseInt(v.slice(0,4),10);if(y>1900&&y<2020){document.getElementById('eby').value=y;previewEditAge();}}
 function onRefChange(){
   /* 기준일이 바뀌면 모든 탭의 조회월을 새 기준월로 다시 맞춘다 */
   const r=refK();
@@ -1125,10 +1127,10 @@ function openWarnModal(){const m=S.members.find(x=>x.id===_selId);if(!m)return;d
 async function submitWarn(){const m=S.members.find(x=>x.id===_selId);if(!m)return;const date=document.getElementById('wDate').value||getRef();const reason=(document.getElementById('wReason').value||'').trim();if(!reason){alert('사유 입력');return;}const dt=new Date(date);const df=(dt.getMonth()+1)+'/'+dt.getDate();m.note=(m.note?m.note+'\n':'')+'['+df+' 경고: '+reason+']';S.warnings.push({id:uid(),name:m.name,date,type:'경고',reason,memberId:m.id});await save();renderMembers();closeM('warnMod');if(_tab===3)safe(syncDashAll);else if(_tab===4)safe(renderArchived);}
 
 /* ★수정1: openEdit - 이름 필드 포함 */
-function openEdit(){const m=S.members.find(x=>x.id===_selId);if(!m)return;_editId=_selId;document.getElementById('ename').value=m.name||'';document.getElementById('eby').value=m.birthYear||'';document.getElementById('em').value=m.mbti||'';document.getElementById('ero').value=m.role||'';document.getElementById('egr').value=m.grade||'';document.getElementById('erg').value=m.region||'';document.getElementById('eht').value=m.height||'';document.getElementById('ent').value=m.note||'';document.getElementById('eap').textContent='';document.getElementById('editMod').style.display='flex';}
+function openEdit(){const m=S.members.find(x=>x.id===_selId);if(!m)return;_editId=_selId;document.getElementById('ename').value=m.name||'';document.getElementById('eby').value=m.birthYear||'';document.getElementById('em').value=m.mbti||'';document.getElementById('ero').value=m.role||'';document.getElementById('egr').value=m.grade||'';document.getElementById('erg').value=m.region||'';document.getElementById('eht').value=m.height||'';document.getElementById('ent').value=m.note||'';document.getElementById('ebd').value=m.birth||'';document.getElementById('eap').textContent='';document.getElementById('editMod').style.display='flex';}
 
 /* ★수정1: saveEdit - 이름 저장 포함 */
-async function saveEdit(){const m=S.members.find(x=>x.id===_editId);if(!m)return;const newName=(document.getElementById('ename').value||'').trim();if(newName)m.name=newName;const by=parseInt(document.getElementById('eby').value||'0',10);if(by>1900){m.birthYear=by;m.age=kr(by);}const kv={em:'mbti',ero:'role',egr:'grade',erg:'region',eht:'height',ent:'note'};Object.entries(kv).forEach(([elId,field])=>{const el=document.getElementById(elId);if(el&&el.value!=='')m[field]=el.value.trim();});await save();renderMembers();closeM('editMod');}
+async function saveEdit(){const m=S.members.find(x=>x.id===_editId);if(!m)return;const newName=(document.getElementById('ename').value||'').trim();if(newName)m.name=newName;const by=parseInt(document.getElementById('eby').value||'0',10);if(by>1900){m.birthYear=by;m.age=kr(by);}const bdEl=document.getElementById('ebd');if(bdEl){const bd=bdEl.value||'';m.birth=bd;if(bd&&!(by>1900)){const y=parseInt(bd.slice(0,4),10);if(y>1900){m.birthYear=y;m.age=kr(y);}}}const kv={em:'mbti',ero:'role',egr:'grade',erg:'region',eht:'height',ent:'note'};Object.entries(kv).forEach(([elId,field])=>{const el=document.getElementById(elId);if(el&&el.value!=='')m[field]=el.value.trim();});await save();renderMembers();closeM('editMod');}
 
 async function chgStat(status){
   // rejected는 기존 그대로 즉시 처리(날짜 확인 불필요)
